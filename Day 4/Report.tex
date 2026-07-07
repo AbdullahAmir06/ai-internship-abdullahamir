@@ -44,7 +44,7 @@
     captionpos=b
 }
 
-\title{\vspace{-1.5cm}\textbf{PKCERT AI \& Software Development Internship \\ Task 04 --- NumPy \& Pandas for Data Analysis}}
+\title{\vspace{-1.5cm}\textbf{PKCERT AI \& Software Development Internship \\ Task 04: NumPy \& Pandas for Data Analysis}}
 \author{Abdullah Amir}
 \date{AI and Software Development \\ 07 July 2026}
 
@@ -57,11 +57,11 @@
 \vspace{0.5cm}
 
 % ======================================================================
-\section*{Part A --- NumPy Fundamentals}
-\addcontentsline{toc}{section}{Part A --- NumPy Fundamentals}
+\section*{Part A: NumPy Fundamentals}
+\addcontentsline{toc}{section}{Part A: NumPy Fundamentals}
 
-\subsection*{1. Creating One- and Multi-Dimensional Arrays}
-NumPy's whole world revolves around one object: the \texttt{ndarray}. Unlike a plain Python list, every element shares the same type and the data sits in one contiguous block of memory, which is what makes the maths on it so fast. There are several ways to build one, and I usually pick whichever matches how much I already know about the contents.
+\subsection*{1. Creating One and Multi Dimensional Arrays}
+NumPy's whole world revolves around one object: the \texttt{ndarray}. Unlike a plain Python list, every element shares the same type and the data sits in one contiguous block of memory, which is what makes the maths on it so fast. There are a few ways to build one, and I usually pick whichever matches how much I already know about the contents.
 
 \begin{lstlisting}[style=py, caption={Different ways to create NumPy arrays.}]
 import numpy as np
@@ -83,7 +83,7 @@ The three attributes I check most often are \texttt{shape} (the size along each 
 \subsection*{2. Indexing, Slicing, Reshaping, and Mathematical Operations}
 Indexing and slicing feel familiar coming from lists, but with more than one dimension you separate the axes with a comma. Reshaping rearranges the same data into a new shape without copying it, and the arithmetic operators all work element by element.
 
-\begin{lstlisting}[style=py, caption={Indexing, slicing, reshaping, and element-wise maths.}]
+\begin{lstlisting}[style=py, caption={Indexing, slicing, reshaping, and element by element maths.}]
 arr = np.arange(1, 13)          # [1 2 ... 12]
 
 # --- reshape into 3 rows x 4 cols ---
@@ -102,12 +102,12 @@ print(grid.sum(axis=0))   # column sums
 print(grid.mean(axis=1))  # row averages
 \end{lstlisting}
 
-The \texttt{axis} argument is worth pausing on: \texttt{axis=0} runs down the rows (so you get one result per column) and \texttt{axis=1} runs across the columns (one result per row). I mix these up less once I picture the axis being the one that ``collapses''.
+The \texttt{axis} argument is worth pausing on: \texttt{axis=0} runs down the rows (so you get one result per column) and \texttt{axis=1} runs across the columns (one result per row). I mix these up less once I picture the axis as the one that ``collapses''.
 
 \subsection*{3. Broadcasting}
 Broadcasting is NumPy's rule for doing maths on arrays whose shapes don't match exactly. Instead of forcing you to manually copy a smaller array out to the bigger one's size, NumPy stretches it for you behind the scenes, without actually using the extra memory.
 
-\begin{lstlisting}[style=py, caption={Broadcasting a 1-D array across a 2-D array.}]
+\begin{lstlisting}[style=py, caption={Broadcasting a 1D array across a 2D array.}]
 matrix = np.array([[1, 2, 3],
                    [4, 5, 6]])      # shape (2, 3)
 row = np.array([10, 20, 30])        # shape (3,)
@@ -151,7 +151,7 @@ print("Vectorized:", time.time() - start, "seconds")
 On my machine the vectorized version finished many times faster than the loop for the same million elements. Beyond the speed, the code reads better too: \texttt{data * 2} states the intent directly, with no loop boilerplate to wade through.
 
 \subsection*{5. Linear Algebra Operations}
-NumPy also covers the linear-algebra basics that turn up all the time in machine learning. Dot products, matrix multiplication, transposes, and inverses are all one call away.
+NumPy also covers the basic linear algebra that turns up all the time in machine learning. Dot products, matrix multiplication, transposes, and inverses are all one call away.
 
 \begin{lstlisting}[style=py, caption={Dot product, matrix multiply, transpose, and inverse.}]
 A = np.array([[1, 2],
@@ -171,14 +171,14 @@ print(inv)
 print(A @ inv)          # ~ identity matrix, confirms the inverse
 \end{lstlisting}
 
-A couple of things I keep in mind here: \texttt{*} is element-wise multiplication, while \texttt{@} (or \texttt{np.dot}) is true matrix multiplication --- an easy trap to fall into. And the inverse only exists for a square matrix whose determinant isn't zero, otherwise \texttt{np.linalg.inv} raises an error.
+A couple of things I keep in mind here: \texttt{*} multiplies element by element, while \texttt{@} (or \texttt{np.dot}) does true matrix multiplication, which is an easy trap to fall into. And the inverse only exists for a square matrix whose determinant isn't zero, otherwise \texttt{np.linalg.inv} raises an error.
 
 % ======================================================================
-\section*{Part B --- Pandas Fundamentals}
-\addcontentsline{toc}{section}{Part B --- Pandas Fundamentals}
+\section*{Part B: Pandas Fundamentals}
+\addcontentsline{toc}{section}{Part B: Pandas Fundamentals}
 
 \subsection*{1. Series and DataFrames}
-Pandas builds on top of NumPy and gives you two main objects. A \texttt{Series} is a one-dimensional labelled array --- think of a single column with an index. A \texttt{DataFrame} is the two-dimensional table you get by putting several of those columns side by side, which is how most real data actually looks.
+Pandas builds on top of NumPy and gives you two main objects. A \texttt{Series} is a labelled array with one dimension, basically a single column with an index. A \texttt{DataFrame} is the two dimensional table you get by putting several of those columns side by side, which is how most real data actually looks.
 
 \begin{lstlisting}[style=py, caption={Creating a Series and a DataFrame.}]
 import pandas as pd
@@ -201,7 +201,7 @@ print(df.describe()) # quick summary stats for numeric columns
 \end{lstlisting}
 
 \subsection*{2. Indexing, Filtering, Sorting, and Selection}
-Once the data is in a DataFrame, most of the work is pulling out the parts you care about. I use \texttt{loc} for label-based selection and \texttt{iloc} for position-based selection, and boolean masks for filtering by a condition.
+Once the data is in a DataFrame, most of the work is pulling out the parts you care about. I use \texttt{loc} to select by label and \texttt{iloc} to select by position, and boolean masks to filter by a condition.
 
 \begin{lstlisting}[style=py, caption={Selecting, filtering, and sorting rows.}]
 # --- selection ---
@@ -220,7 +220,7 @@ print(df.sort_values("salary", ascending=False))
 \end{lstlisting}
 
 \subsection*{3. GroupBy Operations}
-The \texttt{groupby} pattern is the one I use most for summarising. It follows a ``split--apply--combine'' idea: split the rows into groups, apply an aggregation to each group, then combine the results back into a table.
+The \texttt{groupby} pattern is the one I use most for summarising. It follows a simple split, apply, combine idea: split the rows into groups, apply an aggregation to each group, then combine the results back into a table.
 
 \begin{lstlisting}[style=py, caption={Summarising with groupby.}]
 # average salary per department
@@ -256,8 +256,8 @@ outer = pd.merge(employees, salaries, on="emp_id", how="outer")
 The \texttt{how} argument is the key to reading the result. An \textbf{inner} join keeps only the \texttt{emp\_id} values found in both tables (so 1 and 2). A \textbf{left} join keeps every employee and fills a missing salary with \texttt{NaN} (Omar has no salary row). An \textbf{outer} join keeps everything from both sides, filling the gaps on either side with \texttt{NaN}. Choosing the right one comes down to whether you're willing to drop unmatched rows.
 
 % ======================================================================
-\section*{Part C --- Data Analysis Mini Project}
-\addcontentsline{toc}{section}{Part C --- Data Analysis Mini Project}
+\section*{Part C: Data Analysis Mini Project}
+\addcontentsline{toc}{section}{Part C: Data Analysis Mini Project}
 
 \subsection*{Overview}
 For the mini project I used the classic \textbf{Titanic dataset}, a public CSV listing the passengers on the RMS Titanic along with whether each one survived. It's a good choice for practising exploratory analysis because it mixes numeric columns (age, fare) with categorical ones (sex, passenger class) and, importantly, has real missing values to clean up. The application reads the file, cleans it, produces summary statistics, and then digs into what actually drove survival.
@@ -293,7 +293,7 @@ df = df.drop(columns=["Cabin"])
 print(df.isnull().sum())
 \end{lstlisting}
 
-The reasoning: I filled \texttt{Age} with the \emph{median} rather than the mean because a few very old or very young passengers would skew the mean, whereas the median holds steady. For \texttt{Embarked} only two values were missing, so filling them with the most frequent port (the mode) is safe and keeps the rows. \texttt{Cabin} was missing for the large majority of passengers, so imputing it would be mostly guesswork --- dropping the column was the honest choice.
+The reasoning: I filled \texttt{Age} with the \emph{median} rather than the mean because a few very old or very young passengers would skew the mean, whereas the median holds steady. For \texttt{Embarked} only two values were missing, so filling them with the most common port (the mode) is safe and keeps the rows. \texttt{Cabin} was missing for most passengers, so imputing it would be mostly guesswork, and dropping the column felt like the honest choice.
 
 \subsection*{Summary Statistics and Exploratory Analysis}
 With clean data I moved on to the questions the dataset is famous for, using \texttt{groupby} to slice survival by different factors.
@@ -321,18 +321,18 @@ print(df.groupby("AgeGroup", observed=True)["Survived"].mean())
 \subsection*{Key Findings}
 \begin{itemize}[leftmargin=1.4em]
     \item Only about \textbf{38\%} of passengers survived overall.
-    \item \textbf{Passenger class was a major factor.} First-class passengers survived at roughly 63\%, second class at about 47\%, and third class at only 24\% --- a steep drop from top to bottom.
-    \item \textbf{Fare tracks class closely.} First-class passengers paid far more on average (around \pounds84) than third-class (around \pounds14), which lines up with them being berthed closer to the lifeboats.
+    \item \textbf{Passenger class was a major factor.} First class passengers survived at roughly 63\%, second class at about 47\%, and third class at only 24\%, a steep drop from top to bottom.
+    \item \textbf{Fare tracks class closely.} First class passengers paid far more on average (around \pounds84) than third class ones (around \pounds14), which lines up with them being berthed closer to the lifeboats.
     \item \textbf{Age mattered too.} Children had the best odds by age group (about 58\%), while seniors had the worst (about 23\%).
-    \item Combining class and age showed the effects stacking up: a first- or second-class child was very likely to survive, whereas an older third-class passenger was among the least likely.
+    \item Combining class and age showed the effects stacking up: a child in first or second class was very likely to survive, while an older third class passenger was among the least likely.
 \end{itemize}
 
-The full project --- the cleaning script, the analysis code, and a \texttt{README.md} describing the dataset, the cleaning process, the analysis, and these findings --- is uploaded to my GitHub repository for the internship: \url{https://github.com/AbdullahAmir06/ai-internship-abdullahamir}.
+The full project, including the cleaning script, the analysis code, and a \texttt{README.md} that describes the dataset, the cleaning process, the analysis, and these findings, is uploaded to my GitHub repository for the internship: \url{https://github.com/AbdullahAmir06/ai-internship-abdullahamir}.
 
 % ======================================================================
 \section*{Conclusion}
 \addcontentsline{toc}{section}{Conclusion}
-This task tied together the numerical and data-handling side of Python. NumPy gave me the foundation --- arrays, broadcasting, and vectorization that runs far faster than hand-written loops --- while Pandas built on top of it with Series, DataFrames, and the filtering, grouping, and merging tools that make real datasets manageable. Pulling it all together in the Titanic mini project showed how the pieces fit: load messy data, clean it thoughtfully, and then let \texttt{groupby} surface the story hidden inside it. These are the exact skills the rest of the AI/ML work in the internship will keep leaning on.
+This task tied together the numerical and data handling side of Python. NumPy gave me the foundation, with arrays, broadcasting, and vectorization that runs far faster than loops written by hand, while Pandas built on top of it with Series, DataFrames, and the filtering, grouping, and merging tools that make real datasets manageable. Pulling it all together in the Titanic mini project showed how the pieces fit: load messy data, clean it carefully, and then let \texttt{groupby} surface the story hidden inside it. These are the exact skills the rest of the AI and ML work in the internship will keep leaning on.
 
 % ======================================================================
 \end{document}
