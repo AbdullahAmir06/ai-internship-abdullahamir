@@ -1,0 +1,10 @@
+{
+  "constant": {
+    "best_val_acc": 0.709,
+    "epochs_to_90pct_of_best": 13
+  },
+  "cosine": {
+    "best_val_acc": 0.697,
+    "epochs_to_90pct_of_best": 10
+  }
+}

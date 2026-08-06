@@ -1,0 +1,26 @@
+{
+  "fine_tune_all_single_lr": {
+    "arch": "resnet18",
+    "strategy": "fine_tuning",
+    "test_acc": 0.8425,
+    "test_f1": 0.8425556653828318,
+    "val_acc": 0.8175,
+    "train_time_s": 650.0805969238281,
+    "n_params_total": 11181642,
+    "n_params_trained": 11172106,
+    "unfrozen_stages": 4,
+    "discriminative_lr": false
+  },
+  "fine_tune_all_discriminative_lr": {
+    "arch": "resnet18",
+    "strategy": "fine_tuning",
+    "test_acc": 0.855,
+    "test_f1": 0.8545731883152037,
+    "val_acc": 0.835,
+    "train_time_s": 564.0998873710632,
+    "n_params_total": 11181642,
+    "n_params_trained": 11172106,
+    "unfrozen_stages": 4,
+    "discriminative_lr": true
+  }
+}

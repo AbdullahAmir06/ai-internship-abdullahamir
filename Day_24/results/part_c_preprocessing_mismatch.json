@@ -1,0 +1,6 @@
+{
+  "arch": "resnet18",
+  "correct_normalization_test_acc": 0.825,
+  "wrong_normalization_test_acc": 0.75,
+  "accuracy_drop": 0.07499999999999996
+}

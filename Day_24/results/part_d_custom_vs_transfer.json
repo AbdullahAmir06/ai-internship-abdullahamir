@@ -1,0 +1,9 @@
+{
+  "custom_cnn_test_acc": 0.712,
+  "custom_cnn_n_params": 391946,
+  "best_transfer_config": "vgg16/fine_tuning",
+  "best_transfer_test_acc": 0.845,
+  "best_transfer_n_params_trained": 7084554,
+  "absolute_gap": 0.133,
+  "relative_gap_pct": 18.679775280898877
+}

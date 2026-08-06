@@ -1,0 +1,12 @@
+{
+  "arch": "vgg16",
+  "strategy": "fine_tuning",
+  "test_acc": 0.845,
+  "test_f1": 0.8444047639152121,
+  "val_acc": 0.86,
+  "train_time_s": 1698.3141012191772,
+  "n_params_total": 14719818,
+  "n_params_trained": 7084554,
+  "unfrozen_stages": 1,
+  "discriminative_lr": false
+}

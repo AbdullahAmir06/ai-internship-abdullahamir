@@ -1,0 +1,23 @@
+[
+  {
+    "arch": "resnet18",
+    "backbone_params": 11176512,
+    "best_test_acc": 0.825,
+    "best_strategy": "feature_extraction",
+    "cpu_latency_ms": 9.36509370803833
+  },
+  {
+    "arch": "vgg16",
+    "backbone_params": 14714688,
+    "best_test_acc": 0.845,
+    "best_strategy": "fine_tuning",
+    "cpu_latency_ms": 46.85623645782471
+  },
+  {
+    "arch": "mobilenet_v2",
+    "backbone_params": 2223872,
+    "best_test_acc": 0.8125,
+    "best_strategy": "feature_extraction",
+    "cpu_latency_ms": 12.184727191925049
+  }
+]

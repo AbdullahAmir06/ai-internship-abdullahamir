@@ -1,0 +1,7 @@
+{
+  "n_params": 391946,
+  "flops": 30950420,
+  "cpu_latency_ms_per_image": 2.9918289184570312,
+  "gpu_latency_ms_per_image": null,
+  "note": "No CUDA device available in this environment; GPU latency is N/A, not fabricated."
+}

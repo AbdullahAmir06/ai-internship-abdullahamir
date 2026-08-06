@@ -1,0 +1,44 @@
+[
+  {
+    "label": "AdamW",
+    "optimizer": "adamw",
+    "lr": 0.001,
+    "best_val_acc": 0.546,
+    "final_train_acc": 0.5296666666666666
+  },
+  {
+    "label": "Adam",
+    "optimizer": "adam",
+    "lr": 0.001,
+    "best_val_acc": 0.529,
+    "final_train_acc": 0.5271666666666667
+  },
+  {
+    "label": "SGD+momentum",
+    "optimizer": "sgd",
+    "lr": 0.01,
+    "best_val_acc": 0.527,
+    "final_train_acc": 0.4633333333333333
+  },
+  {
+    "label": "AdamW",
+    "optimizer": "adamw",
+    "lr": 0.0001,
+    "best_val_acc": 0.473,
+    "final_train_acc": 0.3958333333333333
+  },
+  {
+    "label": "Adam",
+    "optimizer": "adam",
+    "lr": 0.0001,
+    "best_val_acc": 0.472,
+    "final_train_acc": 0.3948333333333333
+  },
+  {
+    "label": "SGD+momentum",
+    "optimizer": "sgd",
+    "lr": 0.1,
+    "best_val_acc": 0.455,
+    "final_train_acc": 0.4256666666666667
+  }
+]

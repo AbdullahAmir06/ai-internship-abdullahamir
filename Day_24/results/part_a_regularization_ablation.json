@@ -1,0 +1,22 @@
+{
+  "baseline (BN+dropout+wd)": {
+    "best_val_acc": 0.57,
+    "final_val_acc": 0.57,
+    "final_train_acc": 0.5425
+  },
+  "no dropout": {
+    "best_val_acc": 0.595,
+    "final_val_acc": 0.595,
+    "final_train_acc": 0.5951666666666666
+  },
+  "no weight decay": {
+    "best_val_acc": 0.533,
+    "final_val_acc": 0.522,
+    "final_train_acc": 0.5313333333333333
+  },
+  "no batchnorm": {
+    "best_val_acc": 0.47,
+    "final_val_acc": 0.458,
+    "final_train_acc": 0.4165
+  }
+}

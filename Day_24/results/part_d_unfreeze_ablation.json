@@ -1,0 +1,32 @@
+[
+  {
+    "unfrozen_stages": 0,
+    "test_acc": 0.825,
+    "test_f1": 0.8256335117568934,
+    "train_time_s": 73.09500360488892
+  },
+  {
+    "unfrozen_stages": 1,
+    "test_acc": 0.81,
+    "test_f1": 0.8110760042921438,
+    "train_time_s": 308.874276638031
+  },
+  {
+    "unfrozen_stages": 2,
+    "test_acc": 0.8375,
+    "test_f1": 0.8379456203361878,
+    "train_time_s": 257.78331542015076
+  },
+  {
+    "unfrozen_stages": 3,
+    "test_acc": 0.8175,
+    "test_f1": 0.8167791377337108,
+    "train_time_s": 195.3275544643402
+  },
+  {
+    "unfrozen_stages": 4,
+    "test_acc": 0.82,
+    "test_f1": 0.8197202141988569,
+    "train_time_s": 218.7214286327362
+  }
+]
