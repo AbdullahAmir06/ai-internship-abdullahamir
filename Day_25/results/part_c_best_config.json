@@ -1,0 +1,6 @@
+{
+  "name": "glove_bidirectional",
+  "best_val_acc": 0.8915,
+  "bidirectional": true,
+  "pretrained": true
+}

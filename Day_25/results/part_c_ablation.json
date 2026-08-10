@@ -1,0 +1,30 @@
+[
+  {
+    "name": "glove_bidirectional",
+    "best_val_acc": 0.8915,
+    "train_time_s": 141.5193362236023,
+    "n_params": 2236548,
+    "n_params_trainable": 2236548
+  },
+  {
+    "name": "glove_unidirectional",
+    "best_val_acc": 0.8855,
+    "train_time_s": 92.61398315429688,
+    "n_params": 2118276,
+    "n_params_trainable": 2118276
+  },
+  {
+    "name": "trainable_unidirectional",
+    "best_val_acc": 0.7755,
+    "train_time_s": 83.33098030090332,
+    "n_params": 2118276,
+    "n_params_trainable": 2118276
+  },
+  {
+    "name": "trainable_bidirectional",
+    "best_val_acc": 0.7735,
+    "train_time_s": 158.206805229187,
+    "n_params": 2236548,
+    "n_params_trainable": 2236548
+  }
+]
