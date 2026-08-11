@@ -1,3 +1,11 @@
 venv/
 __pycache__/
 *.pyc
+data/
+.claude/
+*.log
+
+# DistilBERT fine-tuned weights (~268MB, over GitHub's 100MB hard limit) --
+# reproducible via `python part_c_transformer_classification.py`, see
+# Day_26/README.md.
+Day_26/models/distilbert_ag_news.pt

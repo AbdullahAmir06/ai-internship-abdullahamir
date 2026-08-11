@@ -1,0 +1,17 @@
+{
+  "distilbert": {
+    "accuracy": 0.913,
+    "macro_f1": 0.9129797124763005,
+    "train_time_s": 4201.605500221252,
+    "epochs": 3,
+    "n_params": 66956548
+  },
+  "lstm_best": {
+    "name": "glove_bidirectional",
+    "accuracy": 0.884,
+    "macro_f1": 0.8848823019361652,
+    "train_time_s": 141.5193362236023,
+    "epochs": 8,
+    "n_params": 2236548
+  }
+}
