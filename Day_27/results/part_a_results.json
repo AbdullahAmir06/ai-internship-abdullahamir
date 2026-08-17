@@ -1,0 +1,465 @@
+{
+  "corpus": [
+    "the quick brown fox jumps over the lazy dog",
+    "the quick brown fox runs past the lazy dog",
+    "a quick fox and a lazy dog become quick friends",
+    "the dog barks at the quick fox in the low light",
+    "lower and lower prices are newer and newer news",
+    "the newest low price is lower than the old price"
+  ],
+  "vocab_size": 67,
+  "vocab": [
+    "</w>",
+    "a",
+    "a</w>",
+    "and",
+    "and</w>",
+    "ar",
+    "b",
+    "br",
+    "brow",
+    "brown</w>",
+    "c",
+    "d",
+    "do",
+    "dog",
+    "dog</w>",
+    "e",
+    "e</w>",
+    "er",
+    "er</w>",
+    "f",
+    "fo",
+    "fox",
+    "fox</w>",
+    "g",
+    "h",
+    "i",
+    "ic",
+    "j",
+    "k",
+    "l",
+    "la",
+    "laz",
+    "lazy",
+    "lazy</w>",
+    "low",
+    "low</w>",
+    "lower</w>",
+    "m",
+    "n",
+    "n</w>",
+    "nd",
+    "ne",
+    "new",
+    "o",
+    "ow",
+    "p",
+    "pr",
+    "pric",
+    "q",
+    "qu",
+    "quic",
+    "quick",
+    "quick</w>",
+    "r",
+    "s",
+    "s</w>",
+    "st</w>",
+    "t",
+    "t</w>",
+    "th",
+    "the</w>",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z"
+  ],
+  "merge_log": [
+    {
+      "step": 1,
+      "pair": [
+        "e",
+        "</w>"
+      ],
+      "freq": 13,
+      "new_symbol": "e</w>"
+    },
+    {
+      "step": 2,
+      "pair": [
+        "t",
+        "h"
+      ],
+      "freq": 10,
+      "new_symbol": "th"
+    },
+    {
+      "step": 3,
+      "pair": [
+        "th",
+        "e</w>"
+      ],
+      "freq": 9,
+      "new_symbol": "the</w>"
+    },
+    {
+      "step": 4,
+      "pair": [
+        "i",
+        "c"
+      ],
+      "freq": 8,
+      "new_symbol": "ic"
+    },
+    {
+      "step": 5,
+      "pair": [
+        "o",
+        "w"
+      ],
+      "freq": 7,
+      "new_symbol": "ow"
+    },
+    {
+      "step": 6,
+      "pair": [
+        "s",
+        "</w>"
+      ],
+      "freq": 7,
+      "new_symbol": "s</w>"
+    },
+    {
+      "step": 7,
+      "pair": [
+        "e",
+        "r"
+      ],
+      "freq": 6,
+      "new_symbol": "er"
+    },
+    {
+      "step": 8,
+      "pair": [
+        "er",
+        "</w>"
+      ],
+      "freq": 6,
+      "new_symbol": "er</w>"
+    },
+    {
+      "step": 9,
+      "pair": [
+        "q",
+        "u"
+      ],
+      "freq": 5,
+      "new_symbol": "qu"
+    },
+    {
+      "step": 10,
+      "pair": [
+        "qu",
+        "ic"
+      ],
+      "freq": 5,
+      "new_symbol": "quic"
+    },
+    {
+      "step": 11,
+      "pair": [
+        "quic",
+        "k"
+      ],
+      "freq": 5,
+      "new_symbol": "quick"
+    },
+    {
+      "step": 12,
+      "pair": [
+        "quick",
+        "</w>"
+      ],
+      "freq": 5,
+      "new_symbol": "quick</w>"
+    },
+    {
+      "step": 13,
+      "pair": [
+        "l",
+        "ow"
+      ],
+      "freq": 5,
+      "new_symbol": "low"
+    },
+    {
+      "step": 14,
+      "pair": [
+        "n",
+        "</w>"
+      ],
+      "freq": 4,
+      "new_symbol": "n</w>"
+    },
+    {
+      "step": 15,
+      "pair": [
+        "f",
+        "o"
+      ],
+      "freq": 4,
+      "new_symbol": "fo"
+    },
+    {
+      "step": 16,
+      "pair": [
+        "fo",
+        "x"
+      ],
+      "freq": 4,
+      "new_symbol": "fox"
+    },
+    {
+      "step": 17,
+      "pair": [
+        "fox",
+        "</w>"
+      ],
+      "freq": 4,
+      "new_symbol": "fox</w>"
+    },
+    {
+      "step": 18,
+      "pair": [
+        "d",
+        "o"
+      ],
+      "freq": 4,
+      "new_symbol": "do"
+    },
+    {
+      "step": 19,
+      "pair": [
+        "do",
+        "g"
+      ],
+      "freq": 4,
+      "new_symbol": "dog"
+    },
+    {
+      "step": 20,
+      "pair": [
+        "dog",
+        "</w>"
+      ],
+      "freq": 4,
+      "new_symbol": "dog</w>"
+    },
+    {
+      "step": 21,
+      "pair": [
+        "t",
+        "</w>"
+      ],
+      "freq": 4,
+      "new_symbol": "t</w>"
+    },
+    {
+      "step": 22,
+      "pair": [
+        "n",
+        "d"
+      ],
+      "freq": 4,
+      "new_symbol": "nd"
+    },
+    {
+      "step": 23,
+      "pair": [
+        "n",
+        "e"
+      ],
+      "freq": 4,
+      "new_symbol": "ne"
+    },
+    {
+      "step": 24,
+      "pair": [
+        "ne",
+        "w"
+      ],
+      "freq": 4,
+      "new_symbol": "new"
+    },
+    {
+      "step": 25,
+      "pair": [
+        "l",
+        "a"
+      ],
+      "freq": 3,
+      "new_symbol": "la"
+    },
+    {
+      "step": 26,
+      "pair": [
+        "la",
+        "z"
+      ],
+      "freq": 3,
+      "new_symbol": "laz"
+    },
+    {
+      "step": 27,
+      "pair": [
+        "laz",
+        "y"
+      ],
+      "freq": 3,
+      "new_symbol": "lazy"
+    },
+    {
+      "step": 28,
+      "pair": [
+        "lazy",
+        "</w>"
+      ],
+      "freq": 3,
+      "new_symbol": "lazy</w>"
+    },
+    {
+      "step": 29,
+      "pair": [
+        "a",
+        "nd"
+      ],
+      "freq": 3,
+      "new_symbol": "and"
+    },
+    {
+      "step": 30,
+      "pair": [
+        "and",
+        "</w>"
+      ],
+      "freq": 3,
+      "new_symbol": "and</w>"
+    },
+    {
+      "step": 31,
+      "pair": [
+        "low",
+        "er</w>"
+      ],
+      "freq": 3,
+      "new_symbol": "lower</w>"
+    },
+    {
+      "step": 32,
+      "pair": [
+        "p",
+        "r"
+      ],
+      "freq": 3,
+      "new_symbol": "pr"
+    },
+    {
+      "step": 33,
+      "pair": [
+        "pr",
+        "ic"
+      ],
+      "freq": 3,
+      "new_symbol": "pric"
+    },
+    {
+      "step": 34,
+      "pair": [
+        "b",
+        "r"
+      ],
+      "freq": 2,
+      "new_symbol": "br"
+    },
+    {
+      "step": 35,
+      "pair": [
+        "br",
+        "ow"
+      ],
+      "freq": 2,
+      "new_symbol": "brow"
+    },
+    {
+      "step": 36,
+      "pair": [
+        "brow",
+        "n</w>"
+      ],
+      "freq": 2,
+      "new_symbol": "brown</w>"
+    },
+    {
+      "step": 37,
+      "pair": [
+        "s",
+        "t</w>"
+      ],
+      "freq": 2,
+      "new_symbol": "st</w>"
+    },
+    {
+      "step": 38,
+      "pair": [
+        "a",
+        "</w>"
+      ],
+      "freq": 2,
+      "new_symbol": "a</w>"
+    },
+    {
+      "step": 39,
+      "pair": [
+        "a",
+        "r"
+      ],
+      "freq": 2,
+      "new_symbol": "ar"
+    },
+    {
+      "step": 40,
+      "pair": [
+        "low",
+        "</w>"
+      ],
+      "freq": 2,
+      "new_symbol": "low</w>"
+    }
+  ],
+  "sample_sentence": "the lower price of the newest fox",
+  "sample_encoded": [
+    "the</w>",
+    "lower</w>",
+    "pric",
+    "e</w>",
+    "o",
+    "f",
+    "</w>",
+    "the</w>",
+    "new",
+    "e",
+    "st</w>",
+    "fox</w>"
+  ],
+  "sample_decoded": "the lower price of the newest fox",
+  "oov_word": "slowest",
+  "oov_encoded": [
+    "s",
+    "low",
+    "e",
+    "st</w>"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "bpe_vocab_size": 67,
+  "word2vec_vocab_size": 5617,
+  "glove_vocab_size": 400000,
+  "contextual_bank_similarities": {
+    "financial_1_vs_geographic": 0.7273916602134705,
+    "financial_1_vs_financial_2": 0.8505842685699463,
+    "geographic_vs_financial_2": 0.6231132745742798
+  }
+}

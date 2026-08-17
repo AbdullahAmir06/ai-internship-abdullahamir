@@ -1,0 +1,161 @@
+{
+  "tokenizer_demo": {
+    "sentence": "The quick brown fox jumps over the newest lower fence.",
+    "tokens": [
+      "[CLS]",
+      "the",
+      "quick",
+      "brown",
+      "fox",
+      "jumps",
+      "over",
+      "the",
+      "newest",
+      "lower",
+      "fence",
+      ".",
+      "[SEP]"
+    ],
+    "input_ids": [
+      101,
+      1996,
+      4248,
+      2829,
+      4419,
+      14523,
+      2058,
+      1996,
+      14751,
+      2896,
+      8638,
+      1012,
+      102
+    ],
+    "attention_mask": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "special_tokens": [
+      "[CLS]",
+      "[SEP]"
+    ]
+  },
+  "bpe_comparison_tokens": [
+    "the</w>",
+    "quick</w>",
+    "brown</w>",
+    "fox</w>",
+    "j",
+    "u",
+    "m",
+    "p",
+    "s</w>",
+    "o",
+    "v",
+    "er</w>",
+    "the</w>",
+    "new",
+    "e",
+    "st</w>",
+    "lower</w>",
+    "f",
+    "e",
+    "n",
+    "c",
+    "e",
+    ".",
+    "</w>"
+  ],
+  "static_comparison": {
+    "per_word_available": {
+      "king": {
+        "in_word2vec": true,
+        "in_glove": true,
+        "bert_dim": 768
+      },
+      "queen": {
+        "in_word2vec": false,
+        "in_glove": true,
+        "bert_dim": 768
+      },
+      "man": {
+        "in_word2vec": true,
+        "in_glove": true,
+        "bert_dim": 768
+      },
+      "woman": {
+        "in_word2vec": true,
+        "in_glove": true,
+        "bert_dim": 768
+      },
+      "car": {
+        "in_word2vec": true,
+        "in_glove": true,
+        "bert_dim": 768
+      },
+      "company": {
+        "in_word2vec": true,
+        "in_glove": true,
+        "bert_dim": 768
+      },
+      "team": {
+        "in_word2vec": true,
+        "in_glove": true,
+        "bert_dim": 768
+      }
+    },
+    "pair_similarities": [
+      {
+        "a": "king",
+        "b": "queen",
+        "distilbert_static": 0.6569694876670837,
+        "word2vec": null,
+        "glove": 0.7507690191268921
+      },
+      {
+        "a": "king",
+        "b": "car",
+        "distilbert_static": 0.2501828968524933,
+        "word2vec": 0.30319976806640625,
+        "glove": 0.28304240107536316
+      },
+      {
+        "a": "man",
+        "b": "woman",
+        "distilbert_static": 0.6504368185997009,
+        "word2vec": 0.46216243505477905,
+        "glove": 0.8323493599891663
+      },
+      {
+        "a": "company",
+        "b": "team",
+        "distilbert_static": 0.41520509123802185,
+        "word2vec": 0.15223506093025208,
+        "glove": 0.4609205424785614
+      }
+    ]
+  },
+  "contextual_demo": {
+    "sentences": {
+      "financial_1": "I deposited money at the bank.",
+      "geographic": "We sat by the river bank.",
+      "financial_2": "The bank increased interest rates this year."
+    },
+    "similarities": {
+      "financial_1_vs_geographic": 0.7273916602134705,
+      "financial_1_vs_financial_2": 0.8505842685699463,
+      "geographic_vs_financial_2": 0.6231132745742798
+    }
+  }
+}

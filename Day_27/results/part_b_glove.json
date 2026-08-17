@@ -1,0 +1,177 @@
+{
+  "vocab_size": 400000,
+  "nearest_neighbors": {
+    "government": [
+      {
+        "word": "administration",
+        "sim": 0.7936998605728149
+      },
+      {
+        "word": "governments",
+        "sim": 0.7700926661491394
+      },
+      {
+        "word": "officials",
+        "sim": 0.7590482234954834
+      },
+      {
+        "word": "authorities",
+        "sim": 0.7441838979721069
+      },
+      {
+        "word": "opposition",
+        "sim": 0.7371706962585449
+      }
+    ],
+    "company": [
+      {
+        "word": "companies",
+        "sim": 0.8256460428237915
+      },
+      {
+        "word": "firm",
+        "sim": 0.8072162866592407
+      },
+      {
+        "word": "subsidiary",
+        "sim": 0.801094651222229
+      },
+      {
+        "word": "co.",
+        "sim": 0.7880029082298279
+      },
+      {
+        "word": "business",
+        "sim": 0.773224949836731
+      }
+    ],
+    "team": [
+      {
+        "word": "teams",
+        "sim": 0.8524312973022461
+      },
+      {
+        "word": "squad",
+        "sim": 0.7849665880203247
+      },
+      {
+        "word": "football",
+        "sim": 0.7720499634742737
+      },
+      {
+        "word": "players",
+        "sim": 0.7663187980651855
+      },
+      {
+        "word": "coach",
+        "sim": 0.764906644821167
+      }
+    ],
+    "technology": [
+      {
+        "word": "technologies",
+        "sim": 0.8506267666816711
+      },
+      {
+        "word": "computer",
+        "sim": 0.7642159461975098
+      },
+      {
+        "word": "tech",
+        "sim": 0.7489413619041443
+      },
+      {
+        "word": "software",
+        "sim": 0.7358859777450562
+      },
+      {
+        "word": "systems",
+        "sim": 0.7292639017105103
+      }
+    ],
+    "president": [
+      {
+        "word": "vice",
+        "sim": 0.8287599086761475
+      },
+      {
+        "word": "presidency",
+        "sim": 0.7150214314460754
+      },
+      {
+        "word": "former",
+        "sim": 0.7060939073562622
+      },
+      {
+        "word": "presidents",
+        "sim": 0.6961983442306519
+      },
+      {
+        "word": "chairman",
+        "sim": 0.6928697824478149
+      }
+    ]
+  },
+  "analogies": [
+    {
+      "a": "king",
+      "b": "man",
+      "c": "woman",
+      "expected": "queen",
+      "result": [
+        {
+          "word": "queen",
+          "sim": 0.7698540687561035
+        },
+        {
+          "word": "monarch",
+          "sim": 0.6843380928039551
+        },
+        {
+          "word": "throne",
+          "sim": 0.6755735874176025
+        }
+      ]
+    },
+    {
+      "a": "paris",
+      "b": "france",
+      "c": "germany",
+      "expected": "berlin",
+      "result": [
+        {
+          "word": "berlin",
+          "sim": 0.8846380710601807
+        },
+        {
+          "word": "frankfurt",
+          "sim": 0.7985544204711914
+        },
+        {
+          "word": "vienna",
+          "sim": 0.76759934425354
+        }
+      ]
+    },
+    {
+      "a": "company",
+      "b": "ceo",
+      "c": "country",
+      "expected": "president",
+      "result": [
+        {
+          "word": "nation",
+          "sim": 0.7125304341316223
+        },
+        {
+          "word": "states",
+          "sim": 0.688041090965271
+        },
+        {
+          "word": "well",
+          "sim": 0.6846709251403809
+        }
+      ]
+    }
+  ]
+}

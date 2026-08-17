@@ -1,0 +1,177 @@
+{
+  "vocab_size": 5617,
+  "nearest_neighbors": {
+    "government": [
+      {
+        "word": "onslaught",
+        "sim": 0.5507994890213013
+      },
+      {
+        "word": "interim",
+        "sim": 0.5499011278152466
+      },
+      {
+        "word": "demands",
+        "sim": 0.5432204008102417
+      },
+      {
+        "word": "reversed",
+        "sim": 0.5425615310668945
+      },
+      {
+        "word": "washington's",
+        "sim": 0.5263217687606812
+      }
+    ],
+    "company": [
+      {
+        "word": "firm",
+        "sim": 0.5824702382087708
+      },
+      {
+        "word": "giant",
+        "sim": 0.5531277656555176
+      },
+      {
+        "word": "companies",
+        "sim": 0.5499311089515686
+      },
+      {
+        "word": "company's",
+        "sim": 0.5493896007537842
+      },
+      {
+        "word": "regulatory",
+        "sim": 0.5125852227210999
+      }
+    ],
+    "team": [
+      {
+        "word": "basketball",
+        "sim": 0.6179305911064148
+      },
+      {
+        "word": "lithuania",
+        "sim": 0.6150665879249573
+      },
+      {
+        "word": "sarunas",
+        "sim": 0.6115723252296448
+      },
+      {
+        "word": "jasikevicius",
+        "sim": 0.6104309558868408
+      },
+      {
+        "word": "92-73",
+        "sim": 0.6066246032714844
+      }
+    ],
+    "technology": [
+      {
+        "word": "disclosure",
+        "sim": 0.6593737006187439
+      },
+      {
+        "word": "toshiba",
+        "sim": 0.6459481120109558
+      },
+      {
+        "word": "harmony",
+        "sim": 0.6429241299629211
+      },
+      {
+        "word": "upgrades",
+        "sim": 0.6297360062599182
+      },
+      {
+        "word": "msn",
+        "sim": 0.6255946755409241
+      }
+    ],
+    "president": [
+      {
+        "word": "hamid",
+        "sim": 0.707258939743042
+      },
+      {
+        "word": "hugo",
+        "sim": 0.6993830800056458
+      },
+      {
+        "word": "karzai",
+        "sim": 0.6970401406288147
+      },
+      {
+        "word": "w",
+        "sim": 0.6962307095527649
+      },
+      {
+        "word": "chavez",
+        "sim": 0.6936607360839844
+      }
+    ]
+  },
+  "analogies": [
+    {
+      "a": "king",
+      "b": "man",
+      "c": "woman",
+      "expected": "queen",
+      "result": [
+        {
+          "word": "wing",
+          "sim": 0.6267645359039307
+        },
+        {
+          "word": "tom",
+          "sim": 0.6044942736625671
+        },
+        {
+          "word": "bobby",
+          "sim": 0.600957453250885
+        }
+      ]
+    },
+    {
+      "a": "paris",
+      "b": "france",
+      "c": "germany",
+      "expected": "berlin",
+      "result": [
+        {
+          "word": "producers",
+          "sim": 0.6002905964851379
+        },
+        {
+          "word": "hike",
+          "sim": 0.5818745493888855
+        },
+        {
+          "word": "slips",
+          "sim": 0.5754570364952087
+        }
+      ]
+    },
+    {
+      "a": "company",
+      "b": "ceo",
+      "c": "country",
+      "expected": "president",
+      "result": [
+        {
+          "word": "companies",
+          "sim": 0.45739975571632385
+        },
+        {
+          "word": "usage",
+          "sim": 0.4539419412612915
+        },
+        {
+          "word": "becoming",
+          "sim": 0.4492708742618561
+        }
+      ]
+    }
+  ]
+}
