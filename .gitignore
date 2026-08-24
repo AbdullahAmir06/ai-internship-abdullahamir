@@ -9,3 +9,6 @@ data/
 # reproducible via `python part_c_transformer_classification.py`, see
 # Day_26/README.md.
 Day_26/models/distilbert_ag_news.pt
+
+# Task 28 -- local secrets, never committed
+Day_28/.env

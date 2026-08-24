@@ -1,0 +1,46 @@
+# Part C.2 -- local container orchestration.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: task28-llm-api:local
+    ports:
+      - "8000:7860"        # host:container -- host port matches the local
+                             # dev convention used throughout this task;
+                             # container always listens on 7860 (the same
+                             # port HF Spaces expects), so this compose file
+                             # doubles as a local rehearsal of the exact
+                             # container that gets deployed.
+    environment:
+      - PORT=7860
+      - PRELOAD_MODELS=true
+      - LOG_LEVEL=INFO
+      - HF_HOME=/app/.cache/huggingface
+    env_file:
+      - .env                # optional -- for HF_TOKEN etc.; see .env.example
+    volumes:
+      - hf-cache:/app/.cache/huggingface   # persists downloaded model weights
+                                             # across `docker compose down/up`,
+                                             # so cold-start is paid once per
+                                             # host, not once per container run
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 240s     # generous -- PRELOAD_MODELS=true means startup
+                               # itself pays all three models' cold-start cost
+                               # before the app is ready to serve traffic
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+        reservations:
+          cpus: "0.5"
+          memory: 1g
+    restart: unless-stopped
+
+volumes:
+  hf-cache:

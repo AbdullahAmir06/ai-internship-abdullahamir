@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task 28 -- LLM Microservice</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Production LLM Microservice</h1>
+    <div id="health-badge" class="badge badge-pending">checking API&hellip;</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="sentiment">Sentiment</button>
+    <button class="tab-btn" data-tab="summarize">Summarize</button>
+    <button class="tab-btn" data-tab="generate">Generate</button>
+  </nav>
+
+  <main>
+    <!-- Sentiment -->
+    <section class="panel active" id="panel-sentiment">
+      <label for="sentiment-text">Text</label>
+      <textarea id="sentiment-text" rows="5" placeholder="Type or paste a sentence to classify&hellip;"></textarea>
+      <button class="run-btn" data-endpoint="/api/v1/sentiment" data-panel="sentiment">Analyze Sentiment</button>
+      <div class="status" id="sentiment-status"></div>
+      <div class="result" id="sentiment-result"></div>
+    </section>
+
+    <!-- Summarize -->
+    <section class="panel" id="panel-summarize">
+      <label for="summarize-text">Text</label>
+      <textarea id="summarize-text" rows="8" placeholder="Paste a longer passage to summarize&hellip;"></textarea>
+      <div class="param-row">
+        <label>Min length <input type="number" id="summarize-min" value="10" min="1" max="100" /></label>
+        <label>Max length <input type="number" id="summarize-max" value="60" min="10" max="200" /></label>
+      </div>
+      <button class="run-btn" data-endpoint="/api/v1/summarize" data-panel="summarize">Summarize</button>
+      <div class="status" id="summarize-status"></div>
+      <div class="result" id="summarize-result"></div>
+    </section>
+
+    <!-- Generate -->
+    <section class="panel" id="panel-generate">
+      <label for="generate-text">Prompt</label>
+      <textarea id="generate-text" rows="4" placeholder="Start a sentence and let the model continue it&hellip;"></textarea>
+      <div class="param-row">
+        <label>Strategy
+          <select id="generate-strategy">
+            <option value="greedy">Greedy</option>
+            <option value="beam">Beam search</option>
+            <option value="top_k">Top-k sampling</option>
+            <option value="top_p" selected>Top-p (nucleus)</option>
+            <option value="temperature">Temperature only</option>
+          </select>
+        </label>
+        <label>Max new tokens <input type="number" id="generate-max-tokens" value="40" min="1" max="256" /></label>
+      </div>
+      <div class="param-row" id="generate-sampling-params">
+        <label>Temperature <input type="range" id="generate-temperature" min="0.1" max="2.0" step="0.1" value="1.0" />
+          <span id="generate-temperature-val">1.0</span></label>
+        <label>Top-p <input type="range" id="generate-top-p" min="0" max="1" step="0.05" value="0.9" />
+          <span id="generate-top-p-val">0.9</span></label>
+        <label>Top-k <input type="number" id="generate-top-k" value="50" min="0" max="200" /></label>
+        <label>Beams <input type="number" id="generate-num-beams" value="4" min="1" max="8" /></label>
+      </div>
+      <button class="run-btn" data-endpoint="/api/v1/generate" data-panel="generate">Generate</button>
+      <div class="status" id="generate-status"></div>
+      <div class="result" id="generate-result"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>PKCERT Task 28 &mdash; async FastAPI microservice, self-contained frontend served from the same container.</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

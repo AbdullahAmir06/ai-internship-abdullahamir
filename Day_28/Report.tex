@@ -1,0 +1,276 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{amsmath}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\setlist{leftmargin=1.4em, topsep=2pt, itemsep=2pt}
+
+\title{\vspace{-1.5cm}\textbf{PKCERT AI \& Software Development Internship \\ Task 28: Production LLM Serving, Asynchronous Microservices \& Full-Stack Deployment}}
+\author{Abdullah Amir}
+\date{AI and Software Development \\ 24 August 2026}
+
+\begin{document}
+
+\maketitle
+\vspace{-0.8cm}
+
+Full code lives in this task's directory (\texttt{app/}, \texttt{frontend/}, \texttt{Dockerfile},
+\texttt{docker-compose.yml}, \texttt{benchmark/}). An asynchronous FastAPI microservice serves
+three Hugging Face \texttt{transformers} pipelines (sentiment, summarization, generation),
+containerized via a multi-stage Docker build, orchestrated locally via \texttt{docker-compose},
+and paired with a self-contained HTML/CSS/JS frontend served from the same container --
+deployment-ready for Hugging Face Spaces (Docker SDK), whose free CPU tier's 16GB RAM
+comfortably fits this task's three-model footprint, unlike Render/Railway's $\sim$512MB--1GB
+free tiers.
+
+% ----------------------------------------------------------------
+\section*{Part A: Pretrained LLM Inference \& Multi-Task Orchestration}
+
+\textbf{A1 -- models, and why.}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}p{1.7cm}p{4.1cm}rp{6.8cm}@{}}
+\toprule
+\textbf{Task} & \textbf{Model} & \textbf{Params} & \textbf{Rationale} \\
+\midrule
+Sentiment & \raggedright cardiffnlp/twitter-\allowbreak roberta-base-\allowbreak sentiment-latest & 125M & Multi-class (neg/neu/pos), not the more common binary SST-2 default -- the brief specifically asks for multi-class. \\[0.4em]
+Summarization & \raggedright t5-small & 60M & Deliberately the lightest viable abstractive summarizer, not a BART-family model (306M-400M) -- a direct instance of A4's memory-footprint trade-off. \\[0.4em]
+Generation & \raggedright distilgpt2 & 82M & The standard lightweight causal LM for CPU-only serving. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Combined resident footprint once all three are loaded: \textbf{$\sim$695MB RSS} (measured
+directly, D2), comfortably inside HF Spaces' free 16GB tier.
+
+\textbf{A2 -- decoding strategies, compared with real output.} All five are implemented and
+selectable per-request via \texttt{decoding\_strategy}. Prompt: \emph{"The best way to learn
+programming is"}, \texttt{max\_new\_tokens=30}:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}p{2cm}p{6.3cm}p{1.6cm}p{2.5cm}@{}}
+\toprule
+\textbf{Strategy} & \textbf{Sample output (truncated)} & \textbf{Diversity} & \textbf{Coherence} \\
+\midrule
+Greedy & "...to learn the basics of programming.\textbackslash n\textbackslash n\textbackslash n..." & None & Degenerates into repetition \\[0.3em]
+Beam (4) & "...to learn the basics of programming.\textbackslash n\textbackslash n..." & Low & Same repetition failure mode \\[0.3em]
+Top-k (50) & "...to take time off of school to become a better, happier, and smarter person." & Moderate & Good \\[0.3em]
+Top-p (0.9) & "...to develop your own languages. We've seen how programming languages do..." & High & Good \\[0.3em]
+Temperature (1.0) & "...to set aside your mind to do so. The best way to teach this is..." & Highest & Lower \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Greedy and beam search both degenerated into repetition on this open-ended prompt -- a real,
+observed failure mode, not just textbook description: both always pick the (locally or
+globally) highest-probability continuation, which for free-form generation tends toward
+short repeating loops once the model enters one. Top-k, top-p, and temperature sampling all
+avoided this by introducing randomness into token selection, at the cost of losing greedy's
+determinism. \textbf{Latency impact}: decoding strategy affects output quality far more than
+per-token latency at this model size -- all five perform one forward pass per generated
+token; beam search is the one real exception, since it evaluates \texttt{num\_beams}
+candidate sequences per step rather than one.
+
+\textbf{A3 -- payload sanitization \& context-window management.} Input is stripped of
+non-printable characters, tokenized with the \emph{target model's own tokenizer} (word count
+and subword-token count diverge -- Task 27's finding), and truncated at the token level (never
+mid-token) when it exceeds a per-task limit, rather than erroring outright. \textbf{A genuine
+bug this surfaced}: naively truncating token ids, decoding back to text, and handing that text
+to the pipeline is not token-count-lossless -- the pipeline re-tokenizes the decoded text from
+scratch and adds fresh special tokens, which can push the count back over a model's true limit.
+This produced a real \texttt{IndexError: index out of range in self} from RoBERTa's
+position-embedding lookup on an 800-word test input. Fixed with a bounded re-check-and-re-trim
+loop (D3 has the full account); re-verified afterward with the same input, now truncating
+cleanly to 511 tokens with no error.
+
+\textbf{A4 -- architectural trade-off: local weights vs.\ remote inference API.}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lp{5.6cm}p{5.6cm}}
+\toprule
+\textbf{Dimension} & \textbf{Direct weight loading (this task)} & \textbf{Remote inference API} \\
+\midrule
+Memory & Full model resident in-process ($\sim$695MB, all three) & Zero local model memory \\
+Compute & Every request pays full CPU forward-pass cost & Runs on provider's (often GPU) infra \\
+Latency & No extra network hop; 24--500ms once warm & Extra round trip, but often GPU-fast \\
+Cold start & Measured, three tiers: 171s (download), 2.2--6.9s (cache-warm), sub-second (fully warm) & Opaque, provider-controlled \\
+Rate limits & None -- bounded only by this host's CPU/RAM & Provider-imposed, often stricter on free tiers \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Direct loading wins here specifically because the three models are small (267M params
+combined) -- a 70B-parameter model would make direct CPU loading impractical on memory alone,
+at which point a remote GPU-backed API becomes the only viable option regardless of its
+network/rate-limit costs.
+
+% ----------------------------------------------------------------
+\section*{Part B: Asynchronous REST API Engineering}
+
+\textbf{B1 -- endpoints.} \texttt{POST /api/v1/sentiment}, \texttt{/summarize},
+\texttt{/generate}, \texttt{GET /healthz}.
+
+\textbf{B2 -- validation \& error handling.} Pydantic v2 models enforce type/length/range
+bounds (\texttt{temperature} $\in[0.01,2.0]$, \texttt{top\_p}$\in[0,1]$,
+\texttt{max\_new\_tokens}$\in[1,256]$) \emph{before} any request reaches inference code --
+verified directly: an out-of-range temperature (5.0) returned \texttt{422} with a structured
+body before touching a model. Dedicated handlers map \texttt{ContextWindowError}$\to$400,
+\texttt{RequestValidationError}$\to$422, and any unhandled exception$\to$500, all sharing one
+\texttt{\{error, detail, status\_code\}} response shape.
+
+\textbf{B3 -- concurrency \& state.} Every Hugging Face pipeline call is synchronous, CPU-bound
+Python -- calling it directly inside an \texttt{async def} route would still block the single
+event loop for the full inference duration. Every inference call is dispatched via
+\texttt{run\_in\_threadpool} instead, keeping the event loop free to route other requests
+(including \texttt{/healthz}) while CPU-bound work runs on a worker thread. \texttt{get\_pipeline()}
+is a lock-guarded lazy-loading singleton: the first request for a task pays its load cost once;
+every later request (any caller) reuses the cached pipeline. \texttt{PRELOAD\_MODELS=true}
+(the Docker default) instead pays all three models' cost once at startup -- A4's cold-start
+table is the direct evidence behind this trade-off. Structured JSON request logging and CORS
+middleware are both configured.
+
+% ----------------------------------------------------------------
+\section*{Part C: Containerization \& Cloud Infrastructure Deployment}
+
+\textbf{C1 -- multi-stage Dockerfile.} Stage \texttt{builder} (python:3.11-slim) resolves and
+installs dependencies -- including the heavy \texttt{torch}/\texttt{transformers} wheels --
+into an isolated virtualenv, in its own layer; since \texttt{requirements.txt} is copied and
+installed \emph{before} application code, editing \texttt{app/*.py} never invalidates this
+layer, so a code-only rebuild skips re-downloading torch entirely. Stage \texttt{runtime}
+starts from a fresh minimal base and copies over only the built virtualenv + source -- none of
+the builder stage's pip cache or intermediate layers survive into the final image. Runs as a
+dedicated non-root user; includes a container-level \texttt{HEALTHCHECK}. \textbf{Measured
+final image size: 1.73GB} -- critically, this required explicitly pinning
+\texttt{pip install torch --index-url https://download.pytorch.org/whl/cpu} \emph{before} the
+general \texttt{requirements.txt} install; a plain \texttt{pip install torch} instead pulls
+PyPI's default CUDA-enabled build, bundling multi-hundred-MB NVIDIA driver libraries this
+CPU-only deployment target never uses -- caught by watching the first build's download log
+show an unexpectedly large torch wheel mid-build, not assumed in advance. \textbf{Verified end
+to end, not just built}: \texttt{docker run} on the resulting image loaded all three models
+(matching A4's cold-start timings), \texttt{docker exec ... whoami} confirmed the container
+runs as the non-root \texttt{app} user, Docker's own \texttt{HEALTHCHECK} reported
+\texttt{healthy}, and all three API endpoints plus the static frontend responded correctly
+against the live container.
+
+\textbf{C2 -- local orchestration.} \texttt{docker-compose.yml} configures environment variable
+injection (\texttt{PORT}, \texttt{PRELOAD\_MODELS}, optional \texttt{.env} for
+\texttt{HF\_TOKEN}), an automated health check (240s start period, since preloading pays all
+three models' cost before reporting healthy), host port 8000 mapped to container port 7860, a
+named volume persisting the Hugging Face model cache across restarts, and explicit CPU
+(2.0)/RAM (2GB limit, 1GB reservation) quotas.
+
+\textbf{C3 -- cloud deployment.} Target: Hugging Face Spaces (Docker SDK) -- chosen over
+Render/Railway specifically because its free CPU tier offers 16GB RAM against their
+$\sim$512MB--1GB, comfortably fitting this task's 695MB three-model footprint without needing
+to drop a model. A GitHub Actions workflow (\texttt{.github/workflows/deploy-hf-spaces.yml})
+mirrors this directory to a Space's git remote on every push to \texttt{main}, which triggers
+Spaces' own automatic rebuild/redeploy -- the CI/CD pipeline the brief asks for. Actually
+pushing this live requires an account-specific Hugging Face token, which was left as the final,
+credential-gated step rather than attempted without the necessary account access (see
+README.md's step-by-step deployment instructions).
+
+% ----------------------------------------------------------------
+\section*{Part D: Frontend, Load Testing \& Documentation}
+
+\textbf{D1 -- frontend.} Plain HTML/CSS/JS, no framework, served by FastAPI itself from the
+same container -- one deployable unit. Three tabs, live parameter controls for generation
+(the strategy dropdown shows/hides only the relevant sliders), a polling health badge, and
+per-request status/error reporting. Every request uses relative URLs, so the identical static
+files work unmodified against localhost, a local container, or the live Spaces URL. Verified
+in an actual browser (headless Chromium screenshot) during development -- the health badge
+correctly reported "API online $\cdot$ 44ms $\cdot$ 3 model(s) loaded" once all three
+pipelines were warm.
+
+\textbf{D2 -- load testing.} Single-client (sequential) vs.\ 6-way concurrent, against the
+local instance with all three models pre-warmed:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Endpoint} & \textbf{Pattern} & \textbf{P50} & \textbf{P90} & \textbf{P99} & \textbf{Throughput} \\
+\midrule
+sentiment & sequential & 24.9ms & 28.6ms & 37.0ms & 34.3 req/s \\
+sentiment & 6 concurrent & 81.2ms & 84.3ms & 86.1ms & 69.5 req/s \\
+summarize & sequential & 491.8ms & 520.5ms & 541.8ms & 2.02 req/s \\
+summarize & 6 concurrent & \textbf{3997.8ms} & 4058.6ms & 4079.3ms & 1.54 req/s \\
+generate & sequential & 308.6ms & 343.1ms & 352.0ms & 3.20 req/s \\
+generate & 6 concurrent & \textbf{1467.8ms} & 1524.9ms & 1527.7ms & 4.07 req/s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Peak RSS: 397MB (sentiment load), 399MB (summarize load), 686MB (generate load, all three
+models resident by this point). Full per-run detail in \texttt{benchmark/results/local.json}.
+This machine had real background load from other running applications during measurement, so
+these are \emph{this-environment} numbers, not clean-room absolutes -- reported transparently
+rather than presented as idealized.
+
+\textbf{The real finding}: sentiment (the cheapest model) scales throughput well under
+concurrency (34$\to$69 req/s) with latency growing only $\sim$3x for a 6x concurrency
+increase. Summarize and generate (the multi-forward-pass generation tasks) show the opposite
+pattern -- throughput barely moves (summarize: 2.02$\to$1.54 req/s, actually \emph{worse})
+while per-request latency balloons 5--8x. This is direct evidence of a CPU-bound concurrency
+bottleneck: \texttt{torch} releases Python's GIL during its C++ tensor ops, so
+\texttt{run\_in\_threadpool} genuinely allows some overlap, but six simultaneous multi-step
+generation loops still compete for the same limited CPU cores, and the scheduler dividing
+those cores six ways serializes the \emph{effective} per-request throughput almost entirely
+for the heavier tasks.
+
+\textbf{D3 -- two non-trivial engineering challenges.}
+
+\emph{1. An unpinned dependency install silently pulled a breaking major version.}
+\texttt{pip install transformers} installed \texttt{transformers==5.15.1} (the newest release
+at build time), which no longer registers \texttt{"summarization"} as a valid pipeline task
+(\texttt{KeyError: Unknown task summarization}, with the printed available-tasks list
+conspicuously omitting both \texttt{summarization} and \texttt{text2text-\allowbreak generation}
+entirely). Diagnosed by reading the actual exception's task list rather than assuming a typo
+in this codebase; resolved by pinning to \texttt{transformers==4.57.6}, restoring the expected
+pipeline registry -- the same class of "an unpinned major-version jump breaks an established
+API" issue this internship already documented once, in Task 25 (gensim vs.\ Python 3.14).
+\texttt{requirements.txt} now pins every dependency with \texttt{==}, not a floor, specifically
+so this failure mode is reproducible-and-fixable rather than silently different on the next
+install.
+
+\emph{2. The concurrency bottleneck measured in D2.} Rather than assume
+\texttt{run\_in\_threadpool} was sufficient for real concurrency, D2's load test was run
+deliberately, and it revealed that it isn't -- not because the async wiring is wrong, but
+because six CPU-bound generation loops on a host with limited cores are fundamentally
+compute-bound, and no amount of async/threading changes that. \textbf{The concrete fix this
+motivates, matching the brief's own suggested mitigations}: (a) \emph{worker-pool adjustment}
+-- running multiple \texttt{uvicorn} worker \emph{processes} (\texttt{--workers N}) would let
+the OS schedule genuinely independent processes across cores instead of Python threads sharing
+one interpreter, at the cost of N$\times$ the model memory (a real trade-off against A1/A4's
+small-model strategy, not a free win); (b) \emph{quantization} --
+\texttt{torch.quantization.quantize\_dynamic} on the linear layers would reduce each forward
+pass's compute cost directly, lowering both single-request latency and the per-request cost
+that compounds under concurrent load, without the memory multiplication worker processes
+require. Neither was applied in this session (documented here as the identified, justified
+next step rather than implemented against a deadline).
+
+\textbf{D4 -- reflection.} Static-vs-dynamic trade-offs recur throughout this task: small
+models chosen over larger ones for deployability (A1), lazy-loading traded against startup
+latency (B3/A4), and concurrency itself trading latency for throughput unevenly across the
+three task types (D2). No single configuration is correct independent of the deployment
+target -- a resource-constrained free tier and a dedicated multi-core production host would
+reasonably make different choices at every one of these decision points.
+
+\end{document}
