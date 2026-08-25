@@ -29,10 +29,12 @@ Full code lives in this task's directory (\texttt{app/}, \texttt{frontend/}, \te
 \texttt{docker-compose.yml}, \texttt{benchmark/}). An asynchronous FastAPI microservice serves
 three Hugging Face \texttt{transformers} pipelines (sentiment, summarization, generation),
 containerized via a multi-stage Docker build, orchestrated locally via \texttt{docker-compose},
-and paired with a self-contained HTML/CSS/JS frontend served from the same container --
-deployment-ready for Hugging Face Spaces (Docker SDK), whose free CPU tier's 16GB RAM
-comfortably fits this task's three-model footprint, unlike Render/Railway's $\sim$512MB--1GB
-free tiers.
+and paired with a self-contained HTML/CSS/JS frontend served from the same container. The
+Docker image was built and run as a real container, verified working end to end (non-root,
+healthy, all four endpoints responding). Live cloud deployment was attempted on Render and
+hit a genuine, measured 512MB memory ceiling -- Part C.3 documents this in full, including two
+mitigations that were actually implemented and tested (not merely proposed) and did not
+resolve it.
 
 % ----------------------------------------------------------------
 \section*{Part A: Pretrained LLM Inference \& Multi-Task Orchestration}
@@ -54,7 +56,8 @@ Generation & \raggedright distilgpt2 & 82M & The standard lightweight causal LM 
 \end{table}
 
 Combined resident footprint once all three are loaded: \textbf{$\sim$695MB RSS} (measured
-directly, D2), comfortably inside HF Spaces' free 16GB tier.
+directly, D2) -- a number that turned out to matter far more than expected once real cloud
+deployment was attempted (C3).
 
 \textbf{A2 -- decoding strategies, compared with real output.} All five are implemented and
 selectable per-request via \texttt{decoding\_strategy}. Prompt: \emph{"The best way to learn
@@ -176,15 +179,49 @@ three models' cost before reporting healthy), host port 8000 mapped to container
 named volume persisting the Hugging Face model cache across restarts, and explicit CPU
 (2.0)/RAM (2GB limit, 1GB reservation) quotas.
 
-\textbf{C3 -- cloud deployment.} Target: Hugging Face Spaces (Docker SDK) -- chosen over
-Render/Railway specifically because its free CPU tier offers 16GB RAM against their
-$\sim$512MB--1GB, comfortably fitting this task's 695MB three-model footprint without needing
-to drop a model. A GitHub Actions workflow (\texttt{.github/workflows/deploy-hf-spaces.yml})
-mirrors this directory to a Space's git remote on every push to \texttt{main}, which triggers
-Spaces' own automatic rebuild/redeploy -- the CI/CD pipeline the brief asks for. Actually
-pushing this live requires an account-specific Hugging Face token, which was left as the final,
-credential-gated step rather than attempted without the necessary account access (see
-README.md's step-by-step deployment instructions).
+\textbf{C3 -- cloud deployment: attempted, with a genuine resource-ceiling finding.}
+\textbf{Hugging Face Spaces was the original target}, but a direct API call
+(\texttt{POST /api/repos/create} for a Docker-SDK Space) returned \texttt{402 Payment
+Required} -- Hugging Face now requires a paid PRO subscription to host Docker/Gradio Spaces
+even on the free tier; only static Spaces (no backend) remain free. Pivoted to
+\textbf{Render} (also brief-approved).
+
+The service was created and deployed via Render's own API (Docker runtime, root directory
+\texttt{Day\_28}, auto-deploy on push to \texttt{main} -- Render's native commit-triggered
+rebuild \emph{is} the CI/CD pipeline Part C.3 asks for, no separate GitHub Actions workflow
+needed). The build succeeded in $\sim$2.5 minutes. The \textbf{runtime deploy failed}:
+\texttt{Out of memory (used over 512Mi)} -- Render's free tier caps a service at 512MB, and
+this service needs $\sim$695MB with all three models resident (D2). Render's logs API showed
+the OOM was hit loading the \emph{first} model, before the other two even began.
+
+\textbf{Two mitigations were implemented and measured, not merely proposed}: (1)
+\texttt{torch\_dtype=\allowbreak torch.bfloat16} (halving the theoretical per-parameter cost) --
+measured RSS after loading all three: \textbf{998MB}, \emph{higher} than the fp32 baseline
+(695MB), likely because this environment's CPU inference path upcasts back to fp32 for some
+ops. (2) \texttt{torch.quantization.quantize\_dynamic} (int8, applied to the sentiment model
+as an isolated test) -- measured RSS: \textbf{1024MB}, worse still, since the (now itself
+deprecated) API produces a new quantized model while the original fp32 model remains
+resident unless manually freed. Both results are reported as measured, precisely because an
+``obvious'' fix that doesn't hold up under direct measurement is a more honest finding than
+one assumed to work.
+
+\textbf{Local Docker verification} (fully confirmed, separate from the cloud attempt): image
+built (\texttt{docker build}, 1.73GB final size, no bloat from unwanted CUDA libraries --
+Part C.1's index-URL fix), container run (\texttt{docker run}), non-root user confirmed
+active inside the running container, and all four endpoints exercised directly against the
+live container. One further genuine finding surfaced here: the container initially could not
+resolve DNS at all inside this development sandbox's default Docker bridge network (a
+\texttt{NameResolutionError} on every Hugging Face Hub request, despite the host machine's
+own unrestricted internet access) -- resolved by passing explicit DNS resolvers
+(\texttt{--dns=8.8.8.8 --dns=1.1.1.1}, now also in \texttt{docker-compose.yml}), after which
+the container downloaded and served all three models correctly.
+
+The Render service (\texttt{task28-llm-microservice}) exists and is configured correctly but
+is not currently serving traffic. Genuinely fitting this architecture into 512MB would need
+either a paid tier (Render's Starter plan, $\sim$\$7/month, raises the limit to 2GB) or a
+materially different approach than what was tried (ONNX Runtime's own quantization tooling,
+or splitting the three models across separate lightweight services) -- documented here as the
+concrete next step rather than silently worked around.
 
 % ----------------------------------------------------------------
 \section*{Part D: Frontend, Load Testing \& Documentation}
@@ -193,7 +230,8 @@ README.md's step-by-step deployment instructions).
 same container -- one deployable unit. Three tabs, live parameter controls for generation
 (the strategy dropdown shows/hides only the relevant sliders), a polling health badge, and
 per-request status/error reporting. Every request uses relative URLs, so the identical static
-files work unmodified against localhost, a local container, or the live Spaces URL. Verified
+files work unmodified against localhost, a local container, or any future live cloud URL
+(untested against a live cloud instance -- see C3). Verified
 in an actual browser (headless Chromium screenshot) during development -- the health badge
 correctly reported "API online $\cdot$ 44ms $\cdot$ 3 model(s) loaded" once all three
 pipelines were warm.

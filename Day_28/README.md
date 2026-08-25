@@ -1,13 +1,3 @@
----
-title: Task 28 LLM Microservice
-emoji: 🤖
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Production LLM Serving, Asynchronous Microservices & Full-Stack Deployment
 
 **PKCERT AI & Software Development Internship, Task 28**
@@ -15,13 +5,12 @@ Author: Abdullah Amir
 
 An asynchronous FastAPI microservice serving three Hugging Face `transformers` pipelines
 (sentiment analysis, summarization, causal generation), containerized with a multi-stage
-Docker build, orchestrated locally via `docker-compose`, deployment-ready for Hugging Face
-Spaces, and paired with a self-contained HTML/CSS/JS frontend served from the same container.
-
-> The YAML block at the top of this file is Hugging Face Spaces' own config format — when this
-> directory is pushed as a Space (see "Deploying to Hugging Face Spaces" below), Spaces reads
-> it to know this is a Docker-SDK app listening on port 7860. It renders as plain text on
-> GitHub, which is expected and harmless.
+Docker build, orchestrated locally via `docker-compose`, and paired with a self-contained
+HTML/CSS/JS frontend served from the same container. Verified working end-to-end as a real
+Docker container (built, run, all four endpoints tested against the live container). A live
+cloud deployment was attempted on Render and hit a genuine, measured resource ceiling — see
+C3 for the full account, including two mitigations that were actually tried (and didn't work,
+which is itself the finding).
 
 ## Architecture at a glance
 
@@ -49,12 +38,12 @@ a multi-service mesh).
 | Task | Model | Params | Rationale |
 |---|---|---|---|
 | Sentiment | `cardiffnlp/twitter-roberta-base-sentiment-latest` | 125M | **Multi-class** (negative/neutral/positive) — the brief specifically asks for multi-class, not the more common binary SST-2 default. |
-| Summarization | `t5-small` | 60M | Deliberately the *lightest* viable abstractive summarizer, not a BART-family model (306M–400M) — a direct instance of Part A4's memory-footprint trade-off, chosen so all three models fit comfortably even on a constrained (512MB–1GB) free-tier host, not only HF Spaces' more generous 16GB tier. |
+| Summarization | `t5-small` | 60M | Deliberately the *lightest* viable abstractive summarizer, not a BART-family model (306M–400M) — a direct instance of Part A4's memory-footprint trade-off. |
 | Generation | `distilgpt2` | 82M | The standard lightweight causal LM for CPU-only serving. |
 
-Combined resident footprint once all three are loaded: **~695MB RSS** (measured directly —
-see the benchmark table below), comfortably inside HF Spaces' free 16GB CPU tier and within
-reach of a well-configured 1GB-RAM tier elsewhere with some margin to spare.
+Combined resident footprint once all three are loaded: **~695MB RSS locally** (measured
+directly — see the benchmark table below). This turned out to matter far more than expected:
+see C3 for what happened when this hit a real 512MB-limited host.
 
 ### A2. Decoding strategies — compared with real output, not just theory
 
@@ -173,41 +162,103 @@ container port `7860`, a named volume persisting the Hugging Face model cache ac
 `down`/`up` cycles (so cold-start is paid once per host, not once per container run), and
 explicit CPU (2.0)/RAM (2GB limit, 1GB reservation) quotas.
 
-### C3. Deploying to Hugging Face Spaces
+### C3. Cloud deployment — attempted, and a genuine resource-ceiling finding
 
-This repository is deploy-ready but was **not** pushed to a live Space as part of this
-session — doing so requires an account-specific Hugging Face token, which is the user's to
-provide (see the conversation this task was built in). Exact steps to go live:
+**Hugging Face Spaces was the original target**, but Hugging Face now requires a paid PRO
+subscription to run Docker/Gradio Spaces even on the free tier (confirmed directly via their
+API: `POST /api/repos/create` for a Docker-SDK Space returned `402 Payment Required`, with the
+message *"hosting Gradio and Docker Spaces on free cpu-basic requires a PRO subscription"*) —
+only static Spaces are free, which can't run this FastAPI/Docker backend. Pivoted to
+**Render** instead (also brief-approved).
 
-1. **Create the Space** (one-time, via the HF website): [huggingface.co/new-space](https://huggingface.co/new-space)
-   → SDK = **Docker** → name it (e.g. `task28-llm-microservice`) → create.
-2. **Get a write-access token**: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-   → "New token" → role = "Write".
-3. **Either** push this directory directly to the Space's own git remote:
-   ```bash
-   cd Day_28
-   git init -b main   # if not already a git repo in its own right
-   git remote add space https://huggingface.co/spaces/<your-username>/task28-llm-microservice
-   git add . && git commit -m "Deploy Task 28 microservice"
-   git push --force space main
-   ```
-   **or** set up the included CI/CD pipeline (repo root:
-   `.github/workflows/deploy-hf-spaces.yml` — GitHub Actions only reads workflows from the
-   repository root, not a subdirectory, since this whole `NCERT/` tree is one repo) for
-   automatic redeploy on every push to this GitHub repo's `main` branch:
-   - Add a repository **secret** `HF_TOKEN` (the token from step 2).
-   - Add a repository **variable** `HF_SPACE_REPO` = `<your-username>/task28-llm-microservice`.
-   - Push to `main` — the workflow mirrors `Day_28/` to the Space's git remote, which
-     triggers Spaces' own automatic Docker rebuild + redeploy.
-4. **Verify**: the Space builds (watch the "Build logs" tab — first build takes several
-   minutes, mostly the `torch`/`transformers` install), then serves at
-   `https://<your-username>-task28-llm-microservice.hf.space/`. Confirm `/healthz` responds
-   and the frontend loads at `/`.
-5. **Cloud benchmarking**: once live, re-run `benchmark/load_test.py --base-url
-   https://<your-space-url> --label cloud` to get the cloud-side latency numbers Part D.2
-   asks for (see `benchmark/results/` for this session's *local* numbers — the cloud numbers
-   depend on the deployed Space's actual host and network path, which only exist once step 3
-   is done).
+**What actually happened on Render**: the service was created and deployed via Render's API
+(`POST /v1/services`, Docker runtime, root directory `Day_28`), auto-deploying from this
+GitHub repo's `main` branch — Render's own commit-triggered rebuild *is* the CI/CD pipeline
+Part C.3 asks for, no separate GitHub Actions workflow needed. The build succeeded (Docker
+image built and pushed to Render's registry in ~2.5 minutes). The **runtime deploy failed**
+with `Out of memory (used over 512Mi)` — Render's free tier caps a service at 512MB RAM, and
+this service's own measured footprint is ~695MB with all three models resident (D2's own
+benchmark table). Investigated, not just accepted: `docker logs`-equivalent output via
+Render's `/v1/logs` API showed the OOM was hit while loading the *first* model (the sentiment
+pipeline) during startup, before the other two even began loading.
+
+**Two mitigations were actually implemented and tested locally** (not merely proposed) before
+concluding this was a genuine ceiling rather than a config problem:
+1. **bfloat16 weight loading** (`torch_dtype=torch.bfloat16` in the pipeline constructor,
+   halving the theoretical per-parameter memory cost from 4 bytes to 2) — measured result:
+   RSS after loading all three models was **998MB**, *higher* than the fp32 baseline (695MB),
+   not lower. Likely cause: this transformers/torch version's CPU inference path upcasts
+   bfloat16 tensors back to fp32 for some ops, so both representations end up resident at
+   points during the forward pass, and the newer transformers API additionally warned
+   `torch_dtype is deprecated! Use dtype instead!`, suggesting the parameter may not have been
+   fully honored as expected in this exact version combination.
+2. **Dynamic int8 quantization** (`torch.quantization.quantize_dynamic(model, {nn.Linear},
+   dtype=torch.qint8)`, applied to the loaded sentiment model alone as an isolated test) —
+   measured result: RSS climbed to **1024MB**, worse still. The API (now itself deprecated,
+   with its own migration warning toward `torchao`) produces a *new* quantized model object
+   while the original fp32 model remains referenced and resident — without extra manual
+   `del`+`gc.collect()`+verification that the original was actually reclaimed, the net effect
+   is strictly more memory used, not less.
+
+Both results are reported as measured, not as failures to hide — an "obvious" fix that doesn't
+hold up under direct measurement is exactly the kind of finding worth documenting precisely
+because it's counter-intuitive and easy to assume works without checking.
+
+**Where this leaves the deployment**: the Docker image itself is fully verified working (see
+"Local Docker verification" below — built, run, all four endpoints tested against the live
+container). The service exists on Render (`task28-llm-microservice`, auto-deploy configured
+against this repo's `main` branch) but is not currently serving traffic, since every deploy
+attempt with the current three-model, fp32, single-container architecture exceeds the free
+tier's 512MB. Genuinely fitting this architecture into 512MB would need either a paid tier
+(Render's Starter plan, ~$7/month, raises the limit to 2GB) or a materially different approach
+than what was tried here (e.g. ONNX Runtime's own quantization tooling rather than PyTorch's,
+or splitting the three models across separate lightweight services rather than one process) —
+out of scope to pursue further within this session, and documented here as the concrete next
+step rather than silently worked around.
+
+#### Local Docker verification (what *is* fully confirmed working)
+
+```
+$ docker build -t task28-llm-api:local .
+Successfully built f5d1349d22bc
+Successfully tagged task28-llm-api:local
+$ docker images task28-llm-api:local
+task28-llm-api:local   f5d1349d22bc   1.73GB
+
+$ docker exec task28-test whoami
+app                                              # confirms non-root execution
+
+$ curl http://localhost:8001/healthz
+{"status":"ok","loaded_models":["sentiment","summarize","generate"],"uptime_s":17362.9}
+
+$ curl -X POST http://localhost:8001/api/v1/sentiment -d '{"text": "This container finally came online and it works great!"}'
+{"label":"positive","score":0.988,"latency_ms":182.1,...}
+
+$ curl -X POST http://localhost:8001/api/v1/summarize -d '{"text": "Docker networking in sandboxed development environments can sometimes fail to resolve DNS by default..."}'
+{"summary":"Docker networking in sandboxed development environments can sometimes fail to resolve DNS by default . this blocks all outbound HTTPS traffic...","latency_ms":455.5,...}
+
+$ curl -X POST http://localhost:8001/api/v1/generate -d '{"prompt": "The container is now", "max_new_tokens": 15, "decoding_strategy": "top_p"}'
+{"generated_text":"The container is now open as a private service. All the information is stored in the container and",...}
+
+$ curl -o /dev/null -w "%{http_code}\n" http://localhost:8001/
+200
+```
+
+Every one of the four endpoints plus the frontend responded correctly against the real,
+running container (not just the bare `uvicorn` process) -- confirmed directly, not assumed.
+
+One genuine finding surfaced getting here: **the container initially could not resolve DNS at
+all** inside this development sandbox's default Docker bridge network (a
+`NameResolutionError` on every Hugging Face Hub request, despite the host machine's own
+unrestricted internet access) -- resolved by passing explicit DNS resolvers
+(`--dns=8.8.8.8 --dns=1.1.1.1`, now also in `docker-compose.yml`), after which the container
+downloaded and served all three models correctly. Even after that fix, the actual model
+downloads inside this specific container took far longer in wall-clock time than the
+identical downloads did outside Docker earlier in this same task (Part A4's cold-start table)
+-- almost certainly reflecting this sandboxed session being paused/idle for extended stretches
+between interactive turns during a long-running background wait, not a genuine difference in
+network throughput once actually executing, so those specific elapsed-time figures aren't
+reported here as a performance finding.
 
 ## Part D -- Frontend, Load Testing & Reflections
 
@@ -219,7 +270,8 @@ Plain HTML/CSS/JS, no framework, served by FastAPI itself from the same containe
 that shows/hides only the relevant sliders — temperature+top-p for nucleus sampling, top-k for
 top-k sampling, beam count for beam search), a polling health badge, and per-request status/
 error reporting. All requests use relative URLs (`/api/v1/...`), so the identical static files
-work unmodified against `localhost`, a local Docker container, or the live Spaces URL. Verified
+work unmodified against `localhost`, a local Docker container, or any future live cloud URL
+(untested against a live cloud instance — see C3's deployment findings). Verified
 in an actual browser (headless Chromium screenshot) during development, not just assumed —
 health badge correctly showed "API online · 44ms · 3 model(s) loaded" once all three pipelines
 were warm.

@@ -6,12 +6,11 @@ services:
       dockerfile: Dockerfile
     image: task28-llm-api:local
     ports:
-      - "8000:7860"        # host:container -- host port matches the local
-                             # dev convention used throughout this task;
-                             # container always listens on 7860 (the same
-                             # port HF Spaces expects), so this compose file
-                             # doubles as a local rehearsal of the exact
-                             # container that gets deployed.
+      - "8000:7860"        # host:container -- container always listens on
+                             # 7860 (matches the Dockerfile's cloud-deploy
+                             # default), so this compose file doubles as a
+                             # local rehearsal of the exact container that
+                             # gets deployed.
     environment:
       - PORT=7860
       - PRELOAD_MODELS=true
@@ -19,6 +18,16 @@ services:
       - HF_HOME=/app/.cache/huggingface
     env_file:
       - .env                # optional -- for HF_TOKEN etc.; see .env.example
+    dns:
+      - 8.8.8.8              # explicit resolvers -- some sandboxed/nested
+      - 1.1.1.1               # Docker hosts don't propagate a working
+                               # /etc/resolv.conf into the default bridge
+                               # network's containers, breaking outbound
+                               # HTTPS entirely (a real issue hit and fixed
+                               # during this task's own development -- see
+                               # README/Report's engineering-challenges
+                               # section). Harmless to keep even on hosts
+                               # where the default resolver already works.
     volumes:
       - hf-cache:/app/.cache/huggingface   # persists downloaded model weights
                                              # across `docker compose down/up`,
