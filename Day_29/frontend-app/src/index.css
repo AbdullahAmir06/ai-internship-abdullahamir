@@ -1,0 +1,98 @@
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+
+:root {
+  /* Case-file room: warm near-black, not cold hacker-black */
+  --ink: #15120e;
+  --ink-2: #1c1812;
+  --panel: #221d16;
+  --panel-border: #3a3226;
+  --paper: #ddd0ac;
+  --paper-2: #e9dfc2;
+
+  /* Inspection lamp -- the one dominant saturated color (Committed strategy) */
+  --lamp: #eaa73e;
+  --lamp-bright: #f6c065;
+  --lamp-dim: #8a5f22;
+
+  /* Strict verdict semantics -- never used decoratively */
+  --flagged: #c8412c;
+  --flagged-dim: #4a1d14;
+  --cleared: #2f8f68;
+  --cleared-dim: #163829;
+
+  --text: #ede6d6;
+  --text-dim: #a89d87;
+  --text-faint: #6f6650;
+
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+
+  --measure: 68ch;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--lamp);
+  color: var(--ink);
+}
+
+::-webkit-scrollbar { width: 12px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 6px;
+  border: 3px solid var(--ink);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--lamp-dim); }
+
+a { color: var(--lamp); }
+
+:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+p { line-height: 1.6; margin: 0; }
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.measure { max-width: var(--measure); }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+#root { min-height: 100vh; }

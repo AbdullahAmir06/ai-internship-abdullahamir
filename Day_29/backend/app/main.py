@@ -18,7 +18,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import inference
@@ -46,11 +46,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Movie Review Sentiment Dashboard API",
+    title="Phishing Email Inspection Desk API",
     description="Capstone project -- serves Model A (TF-IDF + Logistic Regression) "
-                "for live sentiment prediction, and exposes both models' evaluation "
-                "results for comparison.",
-    version="1.0.0",
+                "for live phishing/safe email classification, and exposes both "
+                "models' evaluation results for comparison.",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -112,10 +112,11 @@ async def models_endpoint():
 # the Dockerfile's flatter layout (/app/app/main.py vs. local dev's
 # Day_29/backend/app/main.py) can set this explicitly rather than silently
 # resolving to the wrong directory.
-_frontend_dir = Path(os.getenv("FRONTEND_DIR", str(Path(__file__).parent.parent.parent / "frontend")))
+#
+# Mounted at "/" with html=True (not "/static") because the Vite build emits
+# root-relative asset paths ("/assets/index-xxxx.js") -- explicit API routes
+# registered above still take priority over anything this catch-all mount
+# would otherwise serve for the same path.
+_frontend_dir = Path(os.getenv("FRONTEND_DIR", str(Path(__file__).parent.parent.parent / "frontend-app" / "dist")))
 if _frontend_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(_frontend_dir)), name="static")
-
-    @app.get("/", include_in_schema=False)
-    async def index():
-        return FileResponse(str(_frontend_dir / "index.html"))
+    app.mount("/", StaticFiles(directory=str(_frontend_dir), html=True), name="static")

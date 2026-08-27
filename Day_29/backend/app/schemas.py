@@ -11,7 +11,7 @@ from app.config import MAX_TEXT_LENGTH
 
 class PredictRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH,
-                       description="Review text to classify.")
+                       description="Email text to inspect.")
 
     @field_validator("text")
     @classmethod
@@ -22,7 +22,7 @@ class PredictRequest(BaseModel):
 
 
 class PredictResponse(BaseModel):
-    label: Literal["positive", "negative"]
+    label: Literal["safe", "phishing"]
     confidence: float
     latency_ms: float
 

@@ -1,0 +1,126 @@
+{
+  "preprocessing_notes": "Data cleaning / preprocessing decisions (documented, not just applied)\n------------------------------------------------------------------------\n- Missing values: 19 rows had null/empty email text, plus a further 533\n  rows (~2.9%) carried the literal placeholder string \"empty\" as their\n  entire text -- a scraping artifact in the source dataset (found by\n  actually reading misclassified examples during the first training run,\n  not caught by a naive null check), not real email content. Both dropped.\n- Class imbalance: real and moderate -- 11,322 safe vs. 7,328 phishing\n  (~61/39). Not severe enough to require resampling/class-weighting for a\n  first baseline, but macro-averaged metrics (not raw accuracy alone) are\n  reported throughout specifically because of this imbalance.\n- Text length: extreme, checked directly -- median 159 words, but a long\n  tail out to one 3.5-million-word outlier (a data artifact, not a real\n  email). Rather than dropping long emails (losing real signal), raw text\n  is truncated to the first 20,000 characters before any processing --\n  generous enough to keep essentially all normal emails intact while\n  capping the pathological outliers' cost.\n- No further normalization applied (case/punctuation left as-is) so TF-IDF\n  can still pick up on phishing-typical surface patterns (ALL-CAPS urgency,\n  excessive punctuation) that lowercasing would destroy.\n- Split: dataset ships only a single 'train' split, so an 80/10/10\n  train/val/test split was created directly, stratified by label to\n  preserve the ~61/39 ratio in every split (fixed seed for reproducibility).\n- Tokenization/feature engineering (Model A specifically): TF-IDF over word\n  unigrams+bigrams -- bigrams catch phishing-typical short phrases\n  (\"verify account\", \"click here\", \"act now\") that unigram bag-of-words\n  would lose the co-occurrence structure of.",
+  "hyperparameter_search": [
+    {
+      "config": {
+        "max_features": 10000,
+        "ngram_max": 1,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9751381215469613,
+      "val_f1": 0.973841334930152
+    },
+    {
+      "config": {
+        "max_features": 20000,
+        "ngram_max": 1,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9751381215469613,
+      "val_f1": 0.973841334930152
+    },
+    {
+      "config": {
+        "max_features": 20000,
+        "ngram_max": 2,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9790055248618784,
+      "val_f1": 0.9778816556021348
+    },
+    {
+      "config": {
+        "max_features": 20000,
+        "ngram_max": 2,
+        "C": 0.5
+      },
+      "val_accuracy": 0.9751381215469613,
+      "val_f1": 0.973854837047744
+    },
+    {
+      "config": {
+        "max_features": 20000,
+        "ngram_max": 2,
+        "C": 2.0
+      },
+      "val_accuracy": 0.9806629834254144,
+      "val_f1": 0.9796224868671994
+    },
+    {
+      "config": {
+        "max_features": 30000,
+        "ngram_max": 2,
+        "C": 1.0
+      },
+      "val_accuracy": 0.980110497237569,
+      "val_f1": 0.9790457789914961
+    }
+  ],
+  "best_config": {
+    "max_features": 20000,
+    "ngram_max": 2,
+    "C": 2.0
+  },
+  "val_accuracy": 0.9806629834254144,
+  "test_accuracy": 0.9845303867403314,
+  "test_macro_precision": 0.9829405785760086,
+  "test_macro_recall": 0.9844720216664669,
+  "test_macro_f1": 0.9836936936936937,
+  "avg_latency_ms": 0.1957072737467223,
+  "confusion_matrix": [
+    [
+      1096,
+      17
+    ],
+    [
+      11,
+      686
+    ]
+  ],
+  "n_errors": 28,
+  "sample_errors": [
+    {
+      "text": "software for system builders , resellers , and hardware purchasers only . get latest softwares , 99 % savings . the two most abundant things in the universe are hydrogen and stupidity . i know nothing except the fact of my ignorance .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "korean software for macintosh dear sir / madam , would you please send me any information about korean software for macintosh , iatl proceedings ?",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "congratulations congratulations on your expanded role . i hope this means you get lots more money and fewer hours !",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "creativity and innovation newsletter - march 2005 vol 1 creativity andinnovation newsletter march 2005 seek a creativity driven future out - think your competition the topic of innovation has gained importance for leaders , entrepreneurs , investors , policy - makers , educators and many others . in the past , most progressive organizations have optimized for quality and efficiency . now they would optimize for ideas of new products , goods or services . the competitive advantage is shifting to origination of new useful ideas that would have a lower probability of failure . this semi - monthly newsletter by kore kalibre , titled creativity and innovation , provokes thought on novelty and practicality of product ideas . if there is an existing product idea , is it novel and would it be useful ? this newsletter has answers to key questions , practical ideas and much more . highlights of this issue key questions why is innovation important to jobs and economy ? can there be a process for innovation ? which sectors are primed for opportunities ? practical ideas focus on un - served segments - ruiz , ceo amd understand regulations - david neeleman , ceo jetblue freshest lettuce on the shelf - peter weedfald , svp samsung successful pioneers bill gates - microsoft albert einstein - princeton university michelangelo - renaissance artist book synopsis innovator ' s solution - clayton christensen why not ? - nalebuff & ayres innovative companies samsung : leader in the perfect information economy intel : moore ' s law any queries , please send a mail to : - webmaster @ . org 225 franklin street , floor 26 , boston ma 02110 to unsubscribe please click here",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "q : new email address for pier marco bertinetto content - length : 83 since the old address no longer works , would anybody know the new one ? alexis mr",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "FORD SALUTES THE MILITARY.THIS OFFER IS EXTENDED EXCLUSIVELY TO ALL ACTIVE DUTY, RESERVE, RETIRED, MILITARY VETERANS AND THEIR DIRECT DEPENDANTS ONLY.** DELIVERY TO ANY MILITARY INSTALLATION OR THE CLOSEST PORT IS AVAILABLE. **ROLLING HILLS FORD, Inc. LOCATED IN CLERMONT, FLORIDA, IS OFFERING DURING THE MONTHS OF AUGUST AND SEPTEMBER 2002, A PERSONAL INVITATION.  FOR A LIMITED TIME, A SPECIALTY PERIOD SALES PROGRAM FOR THE ABOVE MENTIONED, WILL BE OFFERED, *UNADVERTISED TO THE GENERAL PUBLIC.*\n  \nCURRENT FORD INCENTIVES ARE ALSO HONORED *IN ADDITION* TO THIS MILITARY PROGRAM, INCLUDING REBATES UP TO $3000 DOLLARS OR 0.0% FINANCING ON SELECT VEHICLES.THIS OFFER INCLUDES PRE-OWNED VEHICLES.SPECIAL CREDIT SITUATIONS WILL BE GERNEROUSLY REVIEWED BY OUR FINANCE DIRECTORS.CONFORMATION CODE - MILITARY: 009AAKKY1109\nTHIS CODE MUST BE PRESENTED TO QUALIFY.EMAIL FOR DETAILS:davidm@rollinghillsford.comOR CALL FOR DETAILS:(352) 394-6161 , ext 1051\nDavid Mitchell, I.T. Department\ndavidm@rollinghillsford.com\n(352) 394 - 6161 EXT 1015\nRolling Hills Ford\nClermont Florida \nhttp://xent.com/mailman/listinfo/fork",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "Aware            8sLLCovering All 50 States\u00c2\u00a0\n\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\n             July 29, 2002\u00c2\u00a0\n\u00c2\u00a0\n         \n\u00c2\u00a0\u00c2\u00a0\n            \u00c2\u00a0\n\u00c2\u00a0\n\u00c2\u00a0\nCovering\n                     All 50 States\n3\n                     Executive Park Drive\nFloor 18\nNewport\n                     Beach,\u00c2\u00a0CA\n                     \u00c2\u00a092661\nWholesale\n                     Mortgage\u00c2\u00a0\nOffice:\n                     866-860-6596\nFax:\n                     714-844-4897\nEmail:\n                     Cohen@GMMortgage.com\u00c2\u00a0\n\u00c2\u00a0Jack\n            Cohen and Loan Officers - Promotion\n\u00c2\u00a0\u00c2\u00a0 \"5\n        Days!\"\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\nWe\nwill beat any\nMortgage\n        Loan Rate.\u00c2\u00a0\nor\n        call\u00c2\u00a0\n(866)\n        860-6596\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0\u00c2\u00a0Name: *\nContact\n            Phone: *\u00c2\u00a0\nState:\u00c2\u00a0\n            *\nCredit\n            Rating: \nGood (some lates)\nExcellent (no lates)\nFair (collection)\nPoor (bankruptcy)\nOwed on 1stRate:\n%*\nOwed on 2nd \nRate:\n%Home Value:*\nAmount\n           Requested: *\nWhat would you like\n           to do?\u00c2\u00a0\n\u00c2\u00a0\n        \nLicensing\n         - Privacy\n         - Terms of Use\n\u00c2\u00a9\n         2002 US Sterns Mortgage\u00c2\u00a0 Corporation-Equal Housing\n         OpportunityRemovehttp://xent.com/mailman/listinfo/fork",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "note",
+      "true": 1,
+      "pred": 0
+    }
+  ],
+  "error_analysis_discussion": "Error analysis, discussed\n-----------------------------\nReviewing misclassified examples: TF-IDF's bag-of-(1,2)-grams representation\nstruggles specifically with well-crafted phishing that mimics legitimate\ncorporate/transactional language closely (no obviously \"spammy\" vocabulary\nto key on), and with legitimate emails that happen to use urgency-adjacent\nphrasing (real password-reset or billing emails). Both error types share a\nroot cause: TF-IDF has no way to model the *global coherence* of an email\n(does the sender/domain/link structure match the claimed identity?) --  it\nonly sees local word co-occurrence. This is exactly the class of error\nTask 27's contextual-vs-static-embeddings discussion predicts a Transformer\nshould handle better, tested directly in the Model B comparison below, not\njust assumed.",
+  "artifact_size_kb": 908.12890625,
+  "max_chars_cap": 20000
+}

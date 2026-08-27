@@ -5,9 +5,11 @@ __pycache__/
 .gitignore
 data/
 *.log
-model/artifacts/model_b_distilbert_final.pt
-model/artifacts/model_b_distilbert_checkpoint.pt
-model/figures/
+model_v2/artifacts/model_b_distilbert_final.pt
+model_v2/artifacts/model_b_distilbert_checkpoint.pt
+model_v2/figures/
+frontend-app/node_modules/
+frontend-app/dist/
 tests/
 docs/
 presentation/

@@ -21,7 +21,7 @@ logger = logging.getLogger("app.inference")
 _model_a = None
 _lock = Lock()
 
-LABEL_NAMES = {0: "negative", 1: "positive"}
+LABEL_NAMES = {0: "safe", 1: "phishing"}
 
 
 def get_model_a():
@@ -81,9 +81,10 @@ def get_model_comparison() -> list[dict]:
             test_macro_f1=t["test_macro_f1"],
             avg_latency_ms=t["avg_latency_ms"],
             artifact_size=f"{t['artifact_size_mb']:.0f} MB",
-            note="Trained and evaluated, not live-served -- exceeds this "
-                 "deployment target's free-tier memory budget (Task 28's "
-                 "measured finding, applied here deliberately).",
+            note="Trained and evaluated in full, kept off the live service -- "
+                 "exceeds this deployment target's free-tier memory budget "
+                 "(a measured finding from an earlier build, applied here "
+                 "deliberately).",
         ))
 
     return models

@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: capstone-sentiment-api:local
+    image: phishing-inspection-api:local
     ports:
       - "8000:8000"
     environment:

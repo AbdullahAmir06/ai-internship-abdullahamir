@@ -1,9 +1,11 @@
 """
 Part D -- functional testing of the end-to-end system (data -> model ->
-API -> UI, tested at the API layer here; the UI's own JS logic is
-functionally identical to Task 28's already browser-verified pattern).
+API -> UI, tested at the API layer here; the UI's own interaction logic is
+covered by this project's manual/screenshot verification, documented in
+FINAL_REPORT.md).
 Run with: pytest tests/test_api.py -v
 """
+import re
 import sys
 from pathlib import Path
 
@@ -36,32 +38,35 @@ def test_healthz_returns_ok():
 
 # ---------------------------------------------------------------- predict: happy path
 
-def test_predict_positive_review():
+def test_predict_phishing_email():
     res = client.post("/api/v1/predict", json={
-        "text": "This film was a delightful surprise, with sharp writing and a career-best performance."
+        "text": "Dear Customer, we detected unusual activity on your account. "
+                "Verify your identity within 24 hours or your access will be "
+                "suspended. Click here to confirm your details immediately."
     })
     assert res.status_code == 200
     body = res.json()
-    assert body["label"] == "positive"
+    assert body["label"] == "phishing"
     assert 0.5 <= body["confidence"] <= 1.0
     assert body["latency_ms"] > 0
 
 
-def test_predict_negative_review():
+def test_predict_safe_email():
     res = client.post("/api/v1/predict", json={
-        "text": "A tedious, poorly written mess that wastes its talented cast."
+        "text": "Hi team, attaching the quarterly report we discussed in "
+                "yesterday's meeting. Let me know if you have any questions."
     })
     assert res.status_code == 200
     body = res.json()
-    assert body["label"] == "negative"
+    assert body["label"] == "safe"
     assert 0.5 <= body["confidence"] <= 1.0
 
 
 def test_predict_response_schema():
-    res = client.post("/api/v1/predict", json={"text": "An average film, nothing special."})
+    res = client.post("/api/v1/predict", json={"text": "A routine status update email."})
     body = res.json()
     assert set(body.keys()) == {"label", "confidence", "latency_ms"}
-    assert body["label"] in ("positive", "negative")
+    assert body["label"] in ("safe", "phishing")
 
 
 # ---------------------------------------------------------------- predict: validation errors
@@ -113,28 +118,34 @@ def test_models_endpoint_returns_model_a():
 def test_index_serves_html():
     res = client.get("/")
     assert res.status_code == 200
-    assert b"Movie Review Sentiment Dashboard" in res.content
+    assert b"Phishing Email Inspection Desk" in res.content
 
 
-def test_static_assets_served():
-    res = client.get("/static/app.js")
-    assert res.status_code == 200
-    res = client.get("/static/style.css")
-    assert res.status_code == 200
+def test_built_assets_referenced_in_html_are_served():
+    """The Vite build hashes asset filenames on every build, so this reads
+    the actual script/style paths out of the served HTML rather than
+    hardcoding a filename that would silently go stale on the next build."""
+    html = client.get("/").text
+    asset_paths = re.findall(r'(?:src|href)="(/assets/[^"]+)"', html)
+    assert asset_paths, "expected at least one /assets/* reference in index.html"
+    for path in asset_paths:
+        res = client.get(path)
+        assert res.status_code == 200, f"{path} did not serve"
 
 
 # ---------------------------------------------------------------- consistency (data -> model -> API)
 
 @pytest.mark.parametrize("text,expected_label", [
-    ("An absolute masterpiece -- brilliant, moving, unforgettable.", "positive"),
-    ("Boring, predictable, and a complete waste of time.", "negative"),
-    ("One of the best films of the year, a triumph in every way.", "positive"),
-    ("Dull, lifeless, and painfully overlong.", "negative"),
+    ("URGENT: Your account will be suspended. Verify your password now by clicking this link.", "phishing"),
+    ("Congratulations! You've won a free prize. Claim your reward by entering your bank details here.", "phishing"),
+    ("Hi, just confirming our meeting is still on for 3pm tomorrow. See you then.", "safe"),
+    ("Thanks for the update, I'll review the document and get back to you by Friday.", "safe"),
 ])
-def test_predict_matches_expected_sentiment_on_clear_cases(text, expected_label):
-    """Clear-cut cases (unambiguous sentiment, no mixed clauses) should be
-    reliably correct -- Model A's own error analysis (model/results/
-    baseline_results.json) found its failures cluster in mixed/contrastive
-    reviews specifically, so this is a fair, not cherry-picked, sanity check."""
+def test_predict_matches_expected_label_on_clear_cases(text, expected_label):
+    """Clear-cut cases (unambiguous phishing cues or unambiguous routine
+    correspondence) should be reliably correct -- Model A's own error
+    analysis (model_v2/results/baseline_results.json) found its failures
+    cluster in well-crafted phishing mimicking legitimate corporate
+    language, so this is a fair, not cherry-picked, sanity check."""
     res = client.post("/api/v1/predict", json={"text": text})
     assert res.json()["label"] == expected_label

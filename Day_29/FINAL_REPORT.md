@@ -1,4 +1,4 @@
-# Capstone Final Report — Movie Review Sentiment Dashboard
+# Capstone Final Report — Phishing Email Inspection Desk
 
 **PKCERT AI & Software Development Internship — Final Capstone Task**
 Author: Abdullah Amir
@@ -11,43 +11,48 @@ and the internship wrap-up documents are `DAILY_LOGS.md` and `INTERNSHIP_REPORT.
 
 ### B1. Data collection & preparation
 
-**Source**: [`rotten_tomatoes`](https://huggingface.co/datasets/rotten_tomatoes) via Hugging
-Face `datasets` — the Cornell Movie Review polarity dataset, a standard, permissively
-licensed NLP benchmark, used here for non-commercial educational purposes.
+**Source**: [`zefang-liu/phishing-email-dataset`](https://huggingface.co/datasets/zefang-liu/phishing-email-dataset)
+via Hugging Face `datasets` — 18,650 real emails labeled phishing or safe, used here for
+non-commercial educational purposes.
 
-**Preprocessing decisions** (verified directly, not assumed — see `model/train_baseline.py`'s
+**Preprocessing decisions** (verified directly, not assumed — see `model_v2/train_baseline.py`'s
 `PREPROCESSING_NOTES`):
-- **Missing values**: none found in any split.
-- **Class imbalance**: none — every split is exactly 50/50 (4265/4265 train, 533/533 val,
-  533/533 test).
-- **Text normalization**: already lowercased and punctuation-separated by the dataset's own
-  curators; left as-is to stay comparable with published baselines.
-- **Feature engineering (Model A)**: TF-IDF over word unigrams+bigrams — bigrams specifically
-  to capture negation/intensity patterns ("not good") that unigram bag-of-words loses.
-
-**Split strategy**: the dataset's own canonical train/validation/test split (8,530/1,066/1,066)
-was used rather than a fresh random split — this is a standard, widely-cited benchmark, so
-using its canonical split keeps results comparable to published numbers and avoids
-introducing a new, undocumented split decision for a dataset this well-established.
+- **Missing values**: 19 rows had null/empty text.
+- **A second, less obvious data-quality issue**: 533 rows (~2.9%) carried the literal
+  placeholder string `"empty"` as their entire text — a scraping artifact in the source
+  dataset, not real content. This was **not** caught by a naive null check; it surfaced only
+  after reading actual misclassified examples from the first training run and noticing the
+  literal word `"empty"` repeating suspiciously often. Both issues were dropped.
+- **Class imbalance**: real and moderate — 11,322 safe vs. 7,328 phishing (~61/39), handled
+  with `class_weight="balanced"` in Model A and macro-averaged metrics throughout (not raw
+  accuracy alone).
+- **Text length**: extreme, checked directly — median 159 words, but a long tail out to a
+  single 3.5-million-word outlier (a data artifact, not a real email). Raw text is truncated
+  to the first 20,000 characters before any processing, rather than dropping long emails
+  outright and losing real signal.
+- **Split**: the dataset ships only a single `train` split; an 80/10/10 train/val/test split
+  was created directly, stratified by label (fixed seed).
+- **Feature engineering (Model A)**: TF-IDF over word unigrams+bigrams — bigrams catch
+  phishing-typical short phrases ("verify account", "click here") that unigram bag-of-words
+  loses the co-occurrence structure of.
 
 ### B2. Model building & training
 
 **Model A: TF-IDF + Logistic Regression** (static embeddings, classical ML — Task 27's
 "sparse representation" side of its own embeddings comparison).
 
-Hyperparameter search (validation set, 6 configurations — vocabulary size, n-gram range,
-regularization strength `C`):
+Hyperparameter search (validation set, 6 configurations):
 
 | max_features | ngram_max | C | Val accuracy | Val F1 |
 |---|---|---|---|---|
-| 10,000 | 1 | 1.0 | 0.7505 | 0.7504 |
-| 20,000 | 1 | 1.0 | 0.7467 | 0.7467 |
-| 20,000 | 2 | 1.0 | 0.7458 | 0.7457 |
-| 20,000 | 2 | 0.5 | 0.7392 | 0.7391 |
-| 20,000 | 2 | 2.0 | 0.7505 | 0.7504 |
-| **30,000** | **2** | **1.0** | **0.7542** | **0.7542** |
+| 10,000 | 1 | 1.0 | 0.9751 | 0.9738 |
+| 20,000 | 1 | 1.0 | 0.9751 | 0.9738 |
+| 20,000 | 2 | 1.0 | 0.9790 | 0.9779 |
+| 20,000 | 2 | 0.5 | 0.9751 | 0.9739 |
+| **20,000** | **2** | **2.0** | **0.9807** | **0.9796** |
+| 30,000 | 2 | 1.0 | 0.9801 | 0.9790 |
 
-Best configuration: 30,000 max features, unigrams+bigrams, C=1.0.
+Best configuration: 20,000 max features, unigrams+bigrams, C=2.0.
 
 **Model B: fine-tuned DistilBERT** (contextual embeddings — Task 27's "learned Transformer
 representation" side).
@@ -57,102 +62,51 @@ Training configuration:
 | Parameter | Value |
 |---|---|
 | Base model | `distilbert-base-uncased` |
-| Max sequence length | 64 tokens |
+| Max sequence length | 128 tokens (longer than a prior iteration's 64 — emails run far longer than short review snippets; phishing cues often appear past the first sentence) |
 | Batch size | 16 |
 | Epochs | 3 |
 | Optimizer | AdamW |
 | Learning rate | 2e-5 |
-| Loss | Cross-entropy (via the model's own classification head) |
 | Checkpointing | Best validation-accuracy checkpoint saved each epoch it improves |
 
-Training/validation curves: `model/figures/transformer_curves.png`. Training accuracy climbs
-monotonically (80.3% → 91.1% → 96.4%) while validation accuracy plateaus after epoch 1
-(84.1% → 84.3% → 84.1%) and validation loss starts rising after epoch 2 (0.338 → 0.347 →
-0.521) even as training loss keeps falling — textbook overfitting by epoch 3. The training
-script's checkpointing (best validation accuracy, not final epoch) is what this pattern is
-*for*: it saved and reloaded the epoch-2 checkpoint (best_val_acc=84.33%) before test
-evaluation, so the reported test numbers below reflect that checkpoint, not the more-overfit
-epoch-3 weights.
+<!-- MODEL_B_TRAINING_CURVES_PLACEHOLDER -->
 
 ### B3. Model evaluation & iteration
 
 **This project's required iteration cycle is the Model A ↔ Model B comparison itself** —
-static vs. contextual embeddings, trained and evaluated under identical data splits, exactly
-the trade-off Task 27 introduced conceptually and this capstone measures directly.
+static vs. contextual embeddings, trained and evaluated under identical data splits, the
+same trade-off Task 27 introduced conceptually and this capstone measures directly, now on
+a phishing-detection task rather than sentiment.
 
 | Metric | Model A (TF-IDF + LogReg) | Model B (fine-tuned DistilBERT) |
 |---|---|---|
-| Test accuracy | 78.71% | **85.27%** |
-| Test macro F1 | 0.7870 | **0.8527** |
-| Avg. inference latency | **0.029ms/example** | 27.58ms/example |
-| Artifact size | **1.4MB** | 267.9MB |
+| Test accuracy | **98.45%** | <!-- MODEL_B_ACC --> |
+| Test macro F1 | **0.9837** | <!-- MODEL_B_F1 --> |
+| Avg. inference latency | **0.20ms/example** | <!-- MODEL_B_LATENCY --> |
+| Artifact size | **908KB** | <!-- MODEL_B_SIZE --> |
 | Deployed live | **Yes** | No (Part A's justified decision) |
 
-**Before/after, in the sense this project's iteration is structured**: Model A alone
-(78.71% accuracy) was the "before" — a working, deployable baseline. Model B is the
-"after" — testing whether contextual embeddings measurably improve on that baseline, and by
-how much. The answer, measured directly rather than assumed: **+6.56 accuracy points
-(78.71% → 85.27%) and +0.066 macro F1**, at the cost of ~190x the artifact size (1.4MB →
-267.9MB) and ~950x the per-example latency (0.029ms → 27.58ms). That is a real, non-trivial
-accuracy gain — not a rounding-error difference — which makes Part A's deployment decision a
-genuine trade-off, not a foregone conclusion: for this project's stated success criteria
-(≥75% accuracy, p50 API latency <50ms, free-tier memory budget), Model A already clears the
-accuracy bar and Model B's extra accuracy is not worth trading away the deployability that
-Task 28 measured is fragile at this model size. A product with a higher accuracy floor, or a
-paid hosting tier with more memory headroom, could reasonably make the opposite call — the
-point of running both to completion was to make that trade-off visible with real numbers
-instead of asserting it.
+<!-- MODEL_B_COMPARISON_DISCUSSION_PLACEHOLDER -->
 
 ### B4. Error analysis
 
-Model A misclassified 227/1,066 test examples (21.3%). Reviewing the misclassified examples
-directly (not just the aggregate rate) reveals a consistent pattern: **TF-IDF's bag-of-
-(1,2)-grams representation cannot resolve sentiment that depends on sentence-level structure
-beyond adjacent-word pairs** — mixed reviews, a sentiment-bearing clause reversed by a later
-clause ("could have been great, but..."), and sarcasm. Example failures (true label →
-predicted label):
+Model A misclassified 28/1,810 test examples (1.5%). Reviewing the misclassified examples
+directly reveals a consistent pattern: **TF-IDF's bag-of-(1,2)-grams representation
+struggles specifically with well-crafted phishing that mimics legitimate corporate or
+transactional language closely** (no obviously "spammy" vocabulary for it to key on), and
+with legitimate emails that happen to use urgency-adjacent phrasing (a real password-reset
+or billing email). Both error types share a root cause: TF-IDF has no mechanism to model an
+email's *global coherence* — whether the sender, link structure, and claimed identity
+actually match — it only sees local word co-occurrence.
 
-- *true=positive, pred=negative*: "it's like a 'big chill' reunion... only these guys are
-  more harmless pranksters than political activists" — positive framing built on a negated
-  comparison, which a bag-of-bigrams representation cannot track across the full clause.
-- *true=positive, pred=negative*: "at its worst, the movie is pretty diverting; the pity is
-  that it rarely achieves its best" — a genuinely mixed review where positive and negative
-  cues both appear, with no mechanism in TF-IDF+LogReg to weigh which clause the reviewer's
-  overall judgment ultimately rests on.
-
-This is exactly the class of error Task 27's contextual-vs-static-embeddings discussion
-predicts a Transformer should handle better, since self-attention lets a later clause's
-sentiment-reversing signal directly inform how an earlier clause's words are weighted.
-
-**Measured, not just predicted**: Model B misclassified 157/1,066 test examples (14.7%,
-vs. Model A's 21.3% — a real reduction, consistent with the accuracy gain above). But
-reviewing Model B's own sample errors shows the *same underlying difficulty*, not a
-different one — the model's error log is dominated by the identical mixed-review and
-negated-comparison pattern:
-
-- *true=positive, pred=negative*: "it's like a 'big chill' reunion... only these guys are
-  more harmless pranksters than political activists" — the same example Model A got wrong.
-- *true=positive, pred=negative*: "at its worst, the movie is pretty diverting; the pity is
-  that it rarely achieves its best" — again, the same example.
-- *true=positive, pred=negative*: "weighty and ponderous but every bit as filling as the
-  treat of the title" — another mixed-cue sentence with a positive overall judgment buried
-  under negative-sounding words.
-
-**Honest conclusion**: contextual embeddings measurably shrink the error rate (21.3% →
-14.7%) but do not eliminate this specific failure mode — self-attention makes the model
-*better* at weighting conflicting clauses, not immune to getting the final call wrong on the
-hardest mixed-sentiment reviews. This is a more accurate takeaway than assuming the
-architecturally "smarter" model would fix Model A's errors outright; it improves on them
-without resolving the underlying ambiguity, which is a property of the text itself, not
-just the representation.
+<!-- MODEL_B_ERROR_COMPARISON_PLACEHOLDER -->
 
 ## Part C — Backend & Frontend Development, Integration
 
 ### C1. API/backend
 
-FastAPI, async route handlers (CPU-bound work offloaded via `run_in_threadpool`, reusing
-Task 28's proven pattern), Pydantic request/response validation, structured JSON logging,
-CORS, and a `/healthz` endpoint. Serves **Model A only** — see Part A/D for why.
+FastAPI, async route handlers, Pydantic request/response validation, structured JSON
+logging, CORS, and a `/healthz` endpoint. Serves **Model A only** — see Part A/D for why.
 
 **API contract**:
 
@@ -162,32 +116,31 @@ CORS, and a `/healthz` endpoint. Serves **Model A only** — see Part A/D for wh
 | `/api/v1/predict` | POST | `{text: str}` | `{label, confidence, latency_ms}` | 200, 422 |
 | `/api/v1/models` | GET | — | `{models: [...]}` | 200 |
 
-Input validation: `text` must be 1–5000 characters and non-blank (enforced by Pydantic at the
-API boundary, verified directly in `tests/test_api.py` — blank text, whitespace-only text,
-missing fields, wrong types, and oversized text all correctly return `422` with a structured
-error body before reaching model code).
+Input validation: `text` must be 1–5000 characters and non-blank, enforced by Pydantic at
+the API boundary and verified in `tests/test_api.py`.
 
-**Authentication**: explicitly out of scope, justified in Part A — this is a stateless,
-public demo tool with no user-specific data or persisted state, so accounts/JWT would add
-complexity with no corresponding functional need.
+**Authentication**: explicitly out of scope — stateless, public tool, no user-specific data.
 
 ### C2. Frontend/UI
 
-Static HTML/CSS/JS (`frontend/`), served by FastAPI from the same container — no separate
-frontend hosting, no build step, matching Task 28's proven single-container pattern. Two
-panels: a live prediction form (text input → label + confidence, with loading/error states),
-and a model-comparison table (fetched from `/api/v1/models`) making the Model A/B trade-off
-visible to the end user, not just documented in this report.
+React + Vite + Framer Motion, built to static assets and served by FastAPI from the same
+container — no separate frontend hosting, no Node process at runtime. Designed through the
+Impeccable workflow (`PRODUCT.md` records the product context and constraints): a
+document-authentication-checkpoint visual world, chosen over the category's default
+AI-dashboard look specifically to avoid it. The predict tool is the first viewport, not a
+form buried under marketing copy — pasting text triggers a raking-light scan animation and a
+rubber-stamped CLEARED/FLAGGED verdict, with confidence rendered as real instrument-panel
+visual weight (bar length, brightness, and glow all scale off the same measured number).
 
-Verified in an actual browser (headless Chromium screenshot, not just assumed): health badge
-correctly reports API status, model-loaded state, and round-trip latency; predictions render
-with correct positive/negative styling.
+Verified directly (headless Chromium + scripted interaction, not just assumed): the health
+badge, the full predict → scan → stamp → confidence-gauge flow, the live model-comparison
+table, and both desktop and mobile layouts.
 
 ### C3. Scope adherence
 
-Every UI element and API endpoint traces directly back to Part A's in-scope feature list — no
-accounts, no history/persistence, no multi-class sentiment, no non-English support — matching
-Part A's explicit scope-creep prevention.
+Every UI element and API endpoint traces back to Part A's in-scope feature list — no
+accounts, no history/persistence, no multi-class labels, no non-English support, and no UI
+copy or interaction that could read as generating phishing content rather than detecting it.
 
 ## Part D — Testing, Deployment & Documentation
 
@@ -201,65 +154,34 @@ Part A's explicit scope-creep prevention.
 | Predict — happy path | 3 | Pass |
 | Predict — validation errors (blank, whitespace, missing field, wrong type, oversized) | 5 | Pass |
 | Model comparison endpoint | 1 | Pass |
-| Frontend/static serving | 2 | Pass |
-| Sentiment correctness on unambiguous cases | 4 | Pass |
+| Frontend/static serving (including built-asset resolution, not hardcoded filenames) | 2 | Pass |
+| Label correctness on unambiguous cases | 4 | Pass |
 
-**A real bug found and fixed during testing**: the initial test run failed
-`test_healthz_returns_ok` (`model_loaded` was `False` even though prediction requests
-succeeded) — traced to `TestClient` not triggering FastAPI's startup lifespan event unless
-used as a context manager. Fixed the test harness to match real server behavior, and used the
-same pass to migrate the app off FastAPI's deprecated `on_event` API to the modern `lifespan`
-context-manager pattern (a genuine code-cleanup outcome of testing, not a cosmetic change).
-
-**A second real bug found before testing even started**: `datasets`'s `ds[split]["text"]`
-returns a `Column` wrapper object in the installed library version, not a plain `list` — this
-passed silently when a quick benchmark sliced it (`texts[:200]`, which coerces to a list) but
-crashed the full training run with `ValueError: text input must be of type str...`. Fixed
-with an explicit `list()` coercion in `model/common.py`, and documented as a reminder that a
-quick manual check can mask a bug a full run then surfaces.
+**A real bug found before testing even started**: 533 rows in the source dataset carried
+the literal placeholder text `"empty"`, not caught by a null check — found by reading actual
+misclassified examples, not by a data-quality scan. Documented above in B1.
 
 ### D2. Deployment
 
-**Docker**: multi-stage build (`backend/Dockerfile`), non-root user, `HEALTHCHECK`, final
-image **645MB** — substantially smaller than Task 28's 1.73GB three-model image, the direct
-and measured payoff of Part A's deployment decision (no `torch`/`transformers` needed at
-serving time for Model A at all).
+**Docker**: multi-stage build (`backend/Dockerfile`) with a Node build stage for the
+frontend and a Python runtime stage, non-root user, `HEALTHCHECK`, final image **649MB**.
 
-**Memory claim, verified directly, not estimated**: run with a hard `--memory=512m` cap (the
-exact limit that caused Task 28's OOM failure), the container started cleanly and used
-**113MiB (22.07%)** of that budget:
+**Memory claim, verified directly, not estimated**: run with a hard `--memory=512m` cap,
+the container started cleanly and used **110MiB (21.48%)** of that budget:
 
 ```
-CONTAINER       CPU %     MEM USAGE / LIMIT   MEM %
-capstone-test   0.10%     113MiB / 512MiB     22.07%
+CONTAINER       MEM USAGE / LIMIT   MEM %
+phishing-test   110MiB / 512MiB     21.48%
 ```
 
 All endpoints (including a live prediction) and the frontend were confirmed working through
-this exact capped container, not just the uncapped bare process.
+this exact capped container.
 
-**Live cloud deployment**: succeeded, on the first attempt, on the same platform (Render,
-free tier, 512MB) that failed for Task 28's larger 3-model service. Deployed via Render's API
-(`day29-sentiment-dashboard`, Docker runtime, GitHub `main` branch auto-deploy — Render's own
-commit-triggered rebuild is the CI/CD pipeline, matching Task 28's pattern) and verified live,
-not just assumed from a successful build:
-
-```
-$ curl https://day29-sentiment-dashboard.onrender.com/healthz
-{"status":"ok","model_loaded":true,"uptime_s":39.75}
-
-$ curl -X POST https://day29-sentiment-dashboard.onrender.com/api/v1/predict \
-  -d '{"text": "This movie was an absolute masterpiece, brilliant acting and a beautiful story."}'
-{"label":"positive","confidence":0.6507,"latency_ms":5.78}
-```
-
-`/api/v1/models` and the frontend (`/`) were confirmed live too. This is the direct payoff of
-Part A's deployment decision: the same free-tier memory ceiling that OOM'd Task 28's service
-is comfortably cleared here, on the first deploy, with no mitigation attempts needed.
+**Live cloud deployment**: <!-- LIVE_DEPLOY_STATUS_PLACEHOLDER -->
 
 ### D3. Documentation
 
-This report, `README.md` (setup/usage), `docs/part_a_scope_and_planning.md` (Part A), and
-`model/figures/architecture_diagram.png` (system architecture) together are intended to let a
-third party set up and run this project independently, per the brief's explicit requirement —
-see `README.md`'s "Setup & run locally" section for the exact commands.
-
+This report, `README.md` (setup/usage), `docs/part_a_scope_and_planning.md` (Part A),
+`PRODUCT.md` (product context for the design workflow), and
+`model_v2/figures/architecture_diagram.png` (system architecture) together let a third party
+set up and run this project independently.

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from pathlib import Path
 
-FIGURES_DIR = Path(__file__).parent.parent / "model" / "figures"
+FIGURES_DIR = Path(__file__).parent.parent / "model_v2" / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -35,11 +35,11 @@ ax.set_ylim(0, 11)
 ax.axis("off")
 
 # ---------------- Data / Model layer ----
-box(ax, 0.4, 9.0, 2.6, 1.3, "rotten_tomatoes\n(HuggingFace datasets)\n8530/1066/1066 split",
+box(ax, 0.4, 9.0, 2.6, 1.3, "phishing-email-dataset\n(HuggingFace datasets)\n14478/1810/1810 split",
     "#cfe2f3")
 box(ax, 3.6, 9.5, 2.7, 0.8, "Model A: TF-IDF +\nLogistic Regression\n(scikit-learn)", "#d9ead3")
 box(ax, 3.6, 8.4, 2.7, 0.8, "Model B: fine-tuned\nDistilBERT (transformers)", "#fce5cd")
-box(ax, 7.0, 9.5, 3.4, 0.8, "model_a_tfidf_logreg.joblib\n(1.4 MB, deployed)", "#d9ead3", fontsize=8.5)
+box(ax, 7.0, 9.5, 3.4, 0.8, "model_a_tfidf_logreg.joblib\n(~900 KB, deployed)", "#d9ead3", fontsize=8.5)
 box(ax, 7.0, 8.4, 3.4, 0.8, "model_b_distilbert_final.pt\n(~268 MB, evaluated only)", "#fce5cd", fontsize=8.5)
 
 arrow(ax, (3.0, 9.65), (3.6, 9.9))
@@ -58,20 +58,22 @@ ax.text(9.85, 8.0, "reads saved\nmetrics only", ha="center", fontsize=7.5, color
 
 # ---------------- Frontend layer ----
 box(ax, 0.4, 6.2, 2.6, 1.4,
-    "Frontend\n(index.html / style.css /\napp.js) served by FastAPI\nfrom the same container",
-    "#fff2cc", fontsize=8.5)
-arrow(ax, (3.0, 6.9), (3.4, 6.9), label="fetch()\n(same origin)")
-arrow(ax, (3.4, 6.5), (3.0, 6.5), label="JSON response")
+    "Frontend\n(React + Vite +\nFramer Motion), built to\nstatic assets, served by\nFastAPI from the same container",
+    "#fff2cc", fontsize=8)
+arrow(ax, (3.0, 6.95), (3.4, 6.95))
+arrow(ax, (3.4, 6.45), (3.0, 6.45))
+ax.text(3.2, 7.75, "fetch() -- same origin", ha="center", fontsize=7.5, color="#555", style="italic")
+ax.text(3.2, 5.95, "JSON response", ha="center", fontsize=7.5, color="#555", style="italic")
 
 # ---------------- Deployment layer ----
 box(ax, 3.4, 4.0, 4.2, 1.4,
-    "Docker container\n(python:3.11-slim, multi-stage)\nnon-root user · HEALTHCHECK\nno torch/transformers at runtime",
-    "#d9d2e9", fontsize=8.7)
+    "Docker container\n(python:3.11-slim + node build stage)\nnon-root user · HEALTHCHECK\nno torch/transformers at runtime",
+    "#d9d2e9", fontsize=8.5)
 arrow(ax, (5.5, 6.2), (5.5, 5.4))
 ax.text(6.35, 5.8, "docker build /\ndocker run", ha="center", fontsize=7.5, color="#555", style="italic")
 
 box(ax, 3.4, 1.8, 4.2, 1.4,
-    "Live deployment target\n(Render / equivalent PaaS)\n~a few hundred MB budget —\nModel A fits, Model B would not\n(Task 28's measured finding)",
+    "Live deployment target\n(Render, free tier)\n512MB budget --\nModel A fits, Model B would not\n(measured finding, applied here)",
     "#f4cccc", fontsize=8.5)
 arrow(ax, (5.5, 4.0), (5.5, 3.2))
 ax.text(6.4, 3.6, "docker push /\nplatform build", ha="center", fontsize=7.5, color="#555", style="italic")
@@ -81,7 +83,7 @@ box(ax, 8.2, 1.8, 2.2, 1.4, "End user\n(browser)", "#d9d9d9", fontsize=9)
 arrow(ax, (7.6, 2.2), (8.2, 2.2), style="<|-|>")
 ax.text(7.9, 2.45, "HTTPS", ha="center", fontsize=7.5, color="#555", style="italic")
 
-ax.set_title("Movie Review Sentiment Dashboard — system architecture", fontsize=13, pad=14)
+ax.set_title("Phishing Email Inspection Desk — system architecture", fontsize=13, pad=14)
 fig.tight_layout()
 fig.savefig(FIGURES_DIR / "architecture_diagram.png", dpi=150)
 print(f"Saved to {FIGURES_DIR / 'architecture_diagram.png'}")

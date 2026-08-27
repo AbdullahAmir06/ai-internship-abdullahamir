@@ -1,13 +1,13 @@
-# Movie Review Sentiment Dashboard — Capstone Project
+# Phishing Email Inspection Desk — Capstone Project
 
 **PKCERT AI & Software Development Internship — Final Capstone Task**
 Author: Abdullah Amir
 
-A web dashboard that classifies movie review sentiment (positive/negative) live, via a
-trained model served through a REST API. Built to demonstrably integrate skills across the
-internship: Task 27's static-vs-contextual-embeddings comparison *is* this project's actual
-model-selection decision (not a side note), and the backend/deployment approach directly
-applies Task 28's hard-won, measured lesson about free-tier memory limits.
+A web tool that classifies pasted email text as phishing or safe, live, via a trained model
+served through a REST API. Built to demonstrably integrate skills across the internship:
+Task 27's static-vs-contextual-embeddings comparison *is* this project's actual
+model-selection decision (not a side note), and the deployment approach directly applies an
+earlier project's measured lesson about free-tier memory limits.
 
 **Full write-up**: see `docs/part_a_scope_and_planning.md` for the scoping/planning
 document, and `FINAL_REPORT.md` for the complete capstone report (Parts B–E).
@@ -16,111 +16,112 @@ document, and `FINAL_REPORT.md` for the complete capstone report (Parts B–E).
 
 | | |
 |---|---|
-| **Problem** | Quick, free, no-signup sentiment classification for movie-review-style text |
-| **Data** | [`rotten_tomatoes`](https://huggingface.co/datasets/rotten_tomatoes) (HF `datasets`), 8,530/1,066/1,066 train/val/test, binary, balanced |
-| **Model A (deployed)** | TF-IDF (unigrams+bigrams) + Logistic Regression — **78.7% test accuracy**, 1.4MB artifact |
-| **Model B (trained, compared)** | Fine-tuned DistilBERT — **85.3% test accuracy**, 268MB artifact, not deployed (see `FINAL_REPORT.md` for the full trade-off) |
+| **Problem** | Quick, free, no-signup phishing/safe classification for pasted email text |
+| **Data** | [`zefang-liu/phishing-email-dataset`](https://huggingface.co/datasets/zefang-liu/phishing-email-dataset) (HF `datasets`), 18,650 emails, 80/10/10 split |
+| **Model A (deployed)** | TF-IDF (unigrams+bigrams) + Logistic Regression — see `FINAL_REPORT.md` for its measured test accuracy |
+| **Model B (trained, compared)** | Fine-tuned DistilBERT — contextual-embeddings comparison, see `FINAL_REPORT.md` for its measured results |
 | **Backend** | FastAPI, async, Pydantic-validated, serves Model A only |
-| **Frontend** | Static HTML/CSS/JS dashboard, served from the same container |
-| **Deployment** | Docker (multi-stage, non-root, 645MB image — no torch/transformers at runtime); **live at [day29-sentiment-dashboard.onrender.com](https://day29-sentiment-dashboard.onrender.com)** (Render free tier) |
+| **Frontend** | React + Vite + Framer Motion, built to static assets, served from the same container |
+| **Deployment** | Docker (multi-stage, Node build stage + Python runtime, non-root, ~650MB image — no torch/transformers at runtime); live at [day29-phishing-inspector.onrender.com](https://day29-phishing-inspector.onrender.com) (Render free tier) |
 
 ## Architecture
 
-![architecture diagram](model/figures/architecture_diagram.png)
+![architecture diagram](model_v2/figures/architecture_diagram.png)
 
 ## Repository layout
 
 ```
 Day_29/
+├── PRODUCT.md                  Product context (Impeccable design workflow)
 ├── docs/
-│   ├── part_a_scope_and_planning.md   # Part A: scope, stack, plan, success criteria
+│   ├── part_a_scope_and_planning.md
 │   └── generate_architecture_diagram.py
-├── model/
-│   ├── common.py                       # shared data-loading helper
-│   ├── train_baseline.py               # Part B: Model A (TF-IDF + LogReg)
-│   ├── train_transformer.py            # Part B: Model B (fine-tuned DistilBERT)
-│   ├── artifacts/                      # saved model files
-│   ├── results/                        # evaluation JSON (both models)
-│   └── figures/                        # curves, confusion matrices, architecture diagram
+├── model_v2/
+│   ├── common.py                Data loading + cleaning
+│   ├── train_baseline.py        Model A training
+│   ├── train_transformer.py     Model B training
+│   ├── artifacts/                Saved models (Model B weights gitignored, >100MB)
+│   ├── results/                  Metrics JSON (read live by the backend)
+│   └── figures/                  Confusion matrices, training curves, architecture diagram
 ├── backend/
-│   ├── app/                            # FastAPI application
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/                           # static dashboard (HTML/CSS/JS)
-├── tests/
-│   └── test_api.py                     # Part D: functional test suite
-├── presentation/                       # Part E: slide deck
+│   ├── app/                      FastAPI application
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend-app/                 React + Vite + Framer Motion source
+├── tests/test_api.py             16 pytest cases
 ├── docker-compose.yml
-├── FINAL_REPORT.md                     # Parts B-E capstone report
-├── DAILY_LOGS.md                       # Part E: internship daily-log compilation
-└── INTERNSHIP_REPORT.md                # Part E: final internship reflection
+├── presentation/slides.html
+├── DAILY_LOGS.md
+├── INTERNSHIP_REPORT.md
+└── FINAL_REPORT.md
 ```
 
 ## Setup & run locally
 
-```bash
-# 1. Environment
-python3 -m venv venv
-source venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # only needed to retrain Model B
-pip install -r backend/requirements.txt
-pip install transformers==4.57.6 scikit-learn datasets matplotlib pandas numpy sentencepiece joblib pytest httpx  # for model/ scripts + tests
-
-# 2. (Optional) retrain the models -- pre-trained artifacts are already committed
-cd model
-python train_baseline.py       # ~10s
-python train_transformer.py    # ~35-45 min CPU (no GPU needed, but slow without one)
-cd ..
-
-# 3. Run the backend (serves the frontend too, at the same URL)
-cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-# visit http://localhost:8000
-```
-
-## Run via Docker
+### Backend + frontend (Docker, recommended)
 
 ```bash
+cd Day_29
 docker compose up --build
-# visit http://localhost:8000
+# → http://localhost:8000
 ```
 
-## Run the tests
+### Backend only (local Python)
 
 ```bash
-source venv/bin/activate
-python -m pytest tests/test_api.py -v
+cd Day_29/backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+MODEL_A_PATH=../model_v2/artifacts/model_a_tfidf_logreg.joblib \
+RESULTS_DIR=../model_v2/results \
+FRONTEND_DIR=../frontend-app/dist \
+uvicorn app.main:app --reload
+```
+
+### Frontend only (local dev, hot reload)
+
+```bash
+cd Day_29/frontend-app
+npm install
+npm run dev
+# proxy /healthz, /api/* to a locally running backend, or npm run build
+# and let the backend serve the built dist/ directly
+```
+
+### Retraining the models
+
+```bash
+cd Day_29/model_v2
+python -m venv venv && source venv/bin/activate
+pip install -r ../model_v2/requirements.txt   # or see requirements.txt in model_v2/
+python train_baseline.py       # Model A -- a few seconds
+python train_transformer.py    # Model B -- CPU fine-tuning, expect a long run
 ```
 
 ## API contract
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/healthz` | GET | Health check + whether Model A is loaded |
-| `/api/v1/predict` | POST | `{"text": "..."}` → `{"label": "positive"\|"negative", "confidence": float, "latency_ms": float}` |
-| `/api/v1/models` | GET | Both models' evaluation metrics, for the dashboard's comparison panel |
-
-Full interactive docs (Swagger UI) at `/docs` once the server is running.
-
-## Usage example
+| Endpoint | Method | Request | Response |
+|---|---|---|---|
+| `/healthz` | GET | — | `{status, model_loaded, uptime_s}` |
+| `/api/v1/predict` | POST | `{text: str}` (1–5000 chars) | `{label: "safe"\|"phishing", confidence, latency_ms}` |
+| `/api/v1/models` | GET | — | `{models: [...]}` — both models' real measured metrics |
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/predict \
+curl -X POST https://day29-phishing-inspector.onrender.com/api/v1/predict \
   -H "Content-Type: application/json" \
-  -d '{"text": "This film was a delightful surprise, with sharp writing and a career-best performance."}'
-# {"label":"positive","confidence":0.72,"latency_ms":11.6}
+  -d '{"text": "Verify your account within 24 hours or it will be suspended. Click here."}'
 ```
 
-## Environment variables (deployment configuration)
+## Environment variables
 
-| Variable | Default | Purpose |
+| Variable | Default (local) | Purpose |
 |---|---|---|
-| `PORT` | `8000` | Port the server listens on |
-| `MODEL_A_PATH` | (relative path) | Override if the model artifact lives elsewhere (set explicitly in `Dockerfile`, since the container's directory depth differs from local dev) |
-| `RESULTS_DIR` | (relative path) | Same reasoning, for the model-comparison endpoint's data source |
-| `FRONTEND_DIR` | (relative path) | Same reasoning, for static file serving |
+| `MODEL_A_PATH` | `model_v2/artifacts/model_a_tfidf_logreg.joblib` | Path to the deployed model artifact |
+| `RESULTS_DIR` | `model_v2/results` | Path to both models' saved evaluation JSON |
+| `FRONTEND_DIR` | `frontend-app/dist` | Path to the built static frontend |
+| `PORT` | `8000` | Server port |
 
-## License / data note
+## Data & license note
 
-`rotten_tomatoes` is a standard, permissively-licensed NLP research/education benchmark
-dataset, used here for a non-commercial educational capstone project.
+The dataset is used for non-commercial educational purposes. This tool performs detection
+only — it never generates, templates, or suggests phishing content.

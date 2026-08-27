@@ -3,62 +3,68 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Capstone Presentation — Movie Review Sentiment Dashboard</title>
+<title>Capstone Presentation — Phishing Email Inspection Desk</title>
 <style>
   :root {
-    --bg: #0f1115; --surface: #171a21; --surface-2: #1f232c; --border: #2a2f3a;
-    --text: #e6e8eb; --text-dim: #9aa1ad; --accent: #5b8def; --ok: #3ecf8e;
-    --warn: #e8b84b; --err: #ef5b5b;
+    --ink: #15120e; --ink-2: #1c1812; --panel: #221d16; --panel-border: #3a3226;
+    --paper: #ddd0ac; --lamp: #eaa73e; --lamp-bright: #f6c065; --lamp-dim: #8a5f22;
+    --flagged: #c8412c; --cleared: #2f8f68; --cleared-dim: #163829;
+    --text: #ede6d6; --text-dim: #a89d87; --text-faint: #6f6650;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
+    margin: 0; background: var(--ink); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     overflow: hidden;
   }
+  .mono { font-family: "SF Mono", "IBM Plex Mono", ui-monospace, monospace; }
   .slide {
     display: none; flex-direction: column; justify-content: center;
     height: 100vh; padding: 4rem 6rem; max-width: 1100px; margin: 0 auto;
   }
   .slide.active { display: flex; }
-  .slide h1 { font-size: 2.6rem; margin: 0 0 0.5rem; }
-  .slide h2 { font-size: 2rem; margin: 0 0 1.5rem; color: var(--accent); }
-  .slide .kicker { color: var(--text-dim); font-size: 1rem; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .slide h1 { font-size: 2.6rem; margin: 0 0 0.5rem; font-weight: 700; }
+  .slide h2 { font-size: 2rem; margin: 0 0 1.5rem; color: var(--lamp); font-weight: 700; }
+  .slide .kicker { color: var(--lamp-bright); font-size: 0.85rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; }
   .slide p, .slide li { font-size: 1.15rem; line-height: 1.6; color: var(--text); }
   .slide ul { padding-left: 1.4rem; }
   .slide li { margin-bottom: 0.6rem; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; }
   table { width: 100%; border-collapse: collapse; font-size: 1rem; margin-top: 1rem; }
-  th, td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); }
+  th, td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--panel-border); }
   th { color: var(--text-dim); font-weight: 600; }
   .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px;
     padding: 1.5rem; margin-top: 1rem;
   }
-  .metric { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .metric { font-size: 2rem; font-weight: 700; color: var(--lamp); }
   .metric-label { color: var(--text-dim); font-size: 0.85rem; }
   .metric-row { display: flex; gap: 2.5rem; margin-top: 1rem; }
-  .tag { display: inline-block; background: rgba(91,141,239,0.15); color: var(--accent);
-         padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.8rem; margin-right: 0.5rem; }
-  .tag.ok { background: rgba(62,207,142,0.15); color: var(--ok); }
-  .tag.warn { background: rgba(232,184,75,0.15); color: var(--warn); }
+  .tag { display: inline-block; background: var(--cleared-dim); color: var(--cleared);
+         padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.8rem; margin-right: 0.5rem; border: 1px solid var(--cleared); }
+  .tag.warn { background: #3a2b12; color: var(--lamp-bright); border-color: var(--lamp-dim); }
+  .stamp {
+    display: inline-block; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.06em;
+    border: 3px solid var(--flagged); color: var(--flagged); border-radius: 4px;
+    padding: 0.2rem 0.7rem; transform: rotate(-5deg);
+  }
   .nav {
     position: fixed; bottom: 1.5rem; right: 2rem; display: flex; gap: 0.75rem;
     align-items: center; color: var(--text-dim); font-size: 0.85rem;
   }
   .nav button {
-    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    background: var(--panel); border: 1px solid var(--panel-border); color: var(--text);
     padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 1rem;
   }
-  .nav button:hover { background: var(--surface); }
-  .footer-note { position: fixed; bottom: 1.5rem; left: 2rem; color: var(--text-dim); font-size: 0.8rem; }
+  .nav button:hover { background: var(--ink-2); border-color: var(--lamp-dim); }
+  .footer-note { position: fixed; bottom: 1.5rem; left: 2rem; color: var(--text-faint); font-size: 0.8rem; }
 </style>
 </head>
 <body>
 
   <section class="slide active">
     <div class="kicker">PKCERT AI &amp; Software Development Internship — Capstone</div>
-    <h1>Movie Review Sentiment Dashboard</h1>
+    <h1>Phishing Email Inspection Desk</h1>
     <p style="color: var(--text-dim); font-size: 1.3rem;">
       Static vs. contextual embeddings, chosen and measured — not just discussed —
       then deployed within a real, previously-measured memory constraint.
@@ -70,9 +76,9 @@
     <div class="kicker">Problem</div>
     <h2>What does this solve?</h2>
     <ul>
-      <li><strong>Target user</strong>: anyone who wants a quick, free sentiment read on review-style text — no signup, no cost.</li>
-      <li><strong>Core functionality</strong>: paste text, get positive/negative + confidence, in under a second.</li>
-      <li><strong>Explicit scope</strong>: binary sentiment only, no accounts, no multi-language — kept tight on purpose.</li>
+      <li><strong>Target user</strong>: anyone who wants a quick, free read on a suspicious email — no signup, no cost.</li>
+      <li><strong>Core functionality</strong>: paste email text, get phishing/safe + confidence, in under a second.</li>
+      <li><strong>Explicit scope</strong>: detection only, English text, binary classification — kept tight, and detection-only is a hard constraint, not a style choice.</li>
     </ul>
   </section>
 
@@ -81,7 +87,7 @@
     <h2>The central design decision</h2>
     <div class="two-col">
       <div class="card">
-        <span class="tag ok">Deployed</span>
+        <span class="tag">Deployed</span>
         <h3 style="margin-top:0.8rem;">Model A: TF-IDF + Logistic Regression</h3>
         <p style="color: var(--text-dim); font-size: 1rem;">Static embeddings, classical ML</p>
       </div>
@@ -92,15 +98,15 @@
       </div>
     </div>
     <p style="margin-top: 1.5rem;">This <em>is</em> Task 27's static-vs-contextual embeddings comparison, applied as a real
-      architectural decision — not a side note.</p>
+      architectural decision — now on a phishing-detection task, not sentiment.</p>
   </section>
 
   <section class="slide">
     <div class="kicker">Why this decision</div>
-    <h2>Learning from Task 28's real failure</h2>
-    <p>Task 28's 3-model FastAPI service hit a <strong>measured</strong> out-of-memory failure on a free-tier host
-       (512MB limit, ~695MB actual footprint). Two "obvious" fixes were tried and measured — both made things
-       <em>worse</em>, not better:</p>
+    <h2>Learning from an earlier, real failure</h2>
+    <p>An earlier build in this same body of work put a 3-model FastAPI service on a free-tier host
+       with a <strong>measured</strong> out-of-memory failure (512MB limit, ~695MB actual footprint). Two "obvious" fixes
+       were tried and measured — both made things <em>worse</em>, not better:</p>
     <table>
       <tr><th>Mitigation tried</th><th>Result</th></tr>
       <tr><td>bfloat16 weight loading</td><td>998MB (worse than 695MB baseline)</td></tr>
@@ -114,15 +120,31 @@
     <div class="kicker">Results</div>
     <h2>Measured, not assumed</h2>
     <div class="metric-row">
-      <div><div class="metric" id="metric-a-acc">78.7%</div><div class="metric-label">Model A test accuracy</div></div>
-      <div><div class="metric">1.4MB</div><div class="metric-label">Model A artifact size</div></div>
-      <div><div class="metric">0.03ms</div><div class="metric-label">Model A avg. latency</div></div>
+      <div><div class="metric" id="metric-a-acc">98.5%</div><div class="metric-label">Model A test accuracy</div></div>
+      <div><div class="metric">908KB</div><div class="metric-label">Model A artifact size</div></div>
+      <div><div class="metric">0.20ms</div><div class="metric-label">Model A avg. latency</div></div>
     </div>
     <div class="metric-row" style="margin-top: 2rem;">
-      <div><div class="metric" style="color: var(--warn);" id="metric-b-acc">85.3%</div><div class="metric-label">Model B test accuracy</div></div>
-      <div><div class="metric" style="color: var(--warn);">267.9MB</div><div class="metric-label">Model B artifact size</div></div>
+      <div><div class="metric" style="color: var(--text-dim);" id="metric-b-acc">see report</div><div class="metric-label">Model B test accuracy</div></div>
+      <div><div class="metric" style="color: var(--text-dim);">~268MB</div><div class="metric-label">Model B artifact size</div></div>
     </div>
     <p style="margin-top: 2rem; color: var(--text-dim);">Full numbers, curves, and error analysis in <code>FINAL_REPORT.md</code>.</p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Live demo</div>
+    <h2>Paste an email, get a verdict</h2>
+    <div class="card" style="background: var(--paper); color: #2a2013;">
+      <p style="font-family: monospace; font-size: 0.95rem; margin: 0;">
+        "Dear Customer, we detected unusual activity on your account. Verify your identity
+        within 24 hours or your access will be suspended. Click here to confirm your details
+        immediately."
+      </p>
+      <p style="margin-top: 1rem;"><span class="stamp">FLAGGED</span> &nbsp; <span class="mono" style="color:#6b5c3c;">confidence 99%</span></p>
+    </div>
+    <p style="margin-top: 1.5rem; color: var(--text-dim);">Live at
+      <a href="https://day29-phishing-inspector.onrender.com" style="color: var(--lamp);" target="_blank">day29-phishing-inspector.onrender.com</a>
+    </p>
   </section>
 
   <section class="slide">
@@ -130,39 +152,35 @@
     <h2>The 512MB claim, verified directly</h2>
     <div class="card">
       <p style="font-family: monospace; font-size: 1rem; margin: 0;">
-        $ docker run --memory=512m ... capstone-sentiment-api:local<br/>
+        $ docker run --memory=512m ... phishing-inspection-api:local<br/>
         CONTAINER&nbsp;&nbsp; MEM USAGE / LIMIT&nbsp;&nbsp; MEM %<br/>
-        capstone-test&nbsp;&nbsp; 113MiB / 512MiB&nbsp;&nbsp; 22.07%
+        phishing-test&nbsp;&nbsp; 110MiB / 512MiB&nbsp;&nbsp; 21.48%
       </p>
     </div>
-    <p style="margin-top: 1.5rem;">Under the <em>exact</em> memory cap that OOM'd Task 28's service, this container
-      uses 22% of the budget — verified by actually running it capped, not estimated.</p>
-    <p style="margin-top: 1rem;">Then actually deployed to that same free tier and hit live:
-      <a href="https://day29-sentiment-dashboard.onrender.com" style="color: var(--accent);" target="_blank">day29-sentiment-dashboard.onrender.com</a>
-      — succeeded on the first attempt, no mitigation needed.</p>
+    <p style="margin-top: 1.5rem;">Under the <em>exact</em> memory cap that OOM'd an earlier project's service, this container
+      uses 21% of the budget — deployed live to the same free tier, verified working, not estimated.</p>
   </section>
 
   <section class="slide">
     <div class="kicker">System</div>
     <h2>Architecture</h2>
-    <img src="../model/figures/architecture_diagram.png" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem;" />
+    <img src="../model_v2/figures/architecture_diagram.png" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem;" />
   </section>
 
   <section class="slide">
     <div class="kicker">Engineering</div>
     <h2>Challenges &amp; how they were resolved</h2>
     <ul>
-      <li><strong>Silent data-type bug</strong>: <code>datasets</code>'s <code>Column</code> wrapper object passed
-        the tokenizer's <code>isinstance(x, list)</code> check when sliced (masking the bug in a quick benchmark)
-        but failed on the full dataset — fixed with an explicit <code>list()</code> coercion at the source.</li>
-      <li><strong>Docker path-depth mismatch</strong>: relative-path assumptions that worked locally
-        (<code>backend/app/main.py</code>, 3 levels above repo root) silently resolved wrong inside the
-        container's flatter layout (<code>/app/app/main.py</code>) — fixed with explicit environment-variable
-        overrides set in the <code>Dockerfile</code> itself.</li>
-      <li><strong>Test client not triggering startup lifespan</strong>: caught by a genuinely failing test
-        (<code>/healthz</code> correctly reported <code>model_loaded=False</code>) — fixed the test harness to
-        match real server behavior, and used the fix as an opportunity to migrate off FastAPI's deprecated
-        <code>on_event</code> API.</li>
+      <li><strong>A silent, non-obvious data bug</strong>: 533 rows (~2.9%) of the source dataset carried the
+        literal placeholder text <code>"empty"</code>, not caught by a null check — found only by reading
+        actual misclassified examples from the first training run, then fixed at the source.</li>
+      <li><strong>Vite's static output vs. a fixed `/static` mount</strong>: the built frontend emits
+        root-relative asset paths, so the backend mounts the built directory at <code>/</code> with
+        <code>html=True</code> instead of a fixed <code>/static</code> prefix, discovered and fixed before it ever
+        reached production.</li>
+      <li><strong>Real system resource contention</strong>: DistilBERT fine-tuning ran under heavy
+        concurrent load on the same machine — diagnosed directly via <code>uptime</code>/<code>free -h</code>
+        rather than assumed to be a bug, and handled by patient background waiting.</li>
     </ul>
   </section>
 
@@ -171,8 +189,8 @@
     <h2>Lessons learned</h2>
     <ul>
       <li>A "correct" model and a "deployable" service are different properties — verify both.</li>
-      <li>An "obvious" fix (quantization, lower precision) can measure worse than doing nothing — check, don't assume.</li>
-      <li>The best defense against a repeated mistake (Task 28's OOM) is designing the <em>next</em> system around
+      <li>A quick manual check can mask a bug a full run then surfaces — the placeholder-text bug proved that twice in one internship.</li>
+      <li>The best defense against a repeated mistake is designing the <em>next</em> system around
         the measured constraint, not just remembering it happened.</li>
     </ul>
     <p style="margin-top: 2rem; color: var(--text-dim);">Thank you. Live demo and code: see <code>README.md</code>.</p>
@@ -180,10 +198,10 @@
 
   <div class="nav">
     <button onclick="prevSlide()">&larr;</button>
-    <span id="slide-counter">1 / 9</span>
+    <span id="slide-counter" class="mono">1 / 9</span>
     <button onclick="nextSlide()">&rarr;</button>
   </div>
-  <div class="footer-note">Movie Review Sentiment Dashboard — Capstone Presentation</div>
+  <div class="footer-note">Phishing Email Inspection Desk — Capstone Presentation</div>
 
   <script>
     const slides = document.querySelectorAll(".slide");
@@ -201,14 +219,13 @@
       if (e.key === "ArrowLeft") prevSlide();
     });
 
-    // Fill in Model A/B live numbers if results JSON is reachable (works
-    // when opened via the dashboard's own server, e.g. a /presentation
-    // route -- falls back to the static placeholder text otherwise).
-    fetch("../model/results/baseline_results.json").then(r => r.json()).then(d => {
+    fetch("../model_v2/results/baseline_results.json").then(r => r.json()).then(d => {
       document.getElementById("metric-a-acc").textContent = (d.test_accuracy * 100).toFixed(1) + "%";
     }).catch(() => {});
-    fetch("../model/results/transformer_results.json").then(r => r.json()).then(d => {
-      document.getElementById("metric-b-acc").textContent = (d.test_accuracy * 100).toFixed(1) + "%";
+    fetch("../model_v2/results/transformer_results.json").then(r => r.json()).then(d => {
+      const el = document.getElementById("metric-b-acc");
+      el.textContent = (d.test_accuracy * 100).toFixed(1) + "%";
+      el.style.color = "var(--lamp)";
     }).catch(() => {});
   </script>
 </body>

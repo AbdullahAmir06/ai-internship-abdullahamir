@@ -1,10 +1,18 @@
-# Part D -- multi-stage Docker build, reusing Task 28's proven pattern.
-#
-# Deliberately much lighter than Task 28's: Model A needs no torch/
-# transformers at serving time at all (Part A's explicit deployment
-# decision) -- just scikit-learn + joblib + FastAPI. This is the direct,
-# concrete payoff of that decision, not just a claim: compare this image's
-# build time and final size against Task 28's 1.73GB, torch-inclusive one.
+# Part D -- multi-stage Docker build. Deliberately much lighter than a
+# Transformer-inclusive image would be: Model A needs no torch/transformers
+# at serving time at all (Part A's explicit deployment decision) -- just
+# scikit-learn + joblib + FastAPI. A Node stage builds the React/Framer
+# Motion frontend to static assets; only the built output (not Node itself)
+# reaches the runtime image.
+
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /fe
+COPY frontend-app/package.json frontend-app/package-lock.json ./
+RUN npm ci
+COPY frontend-app/ .
+RUN npm run build
+
 
 FROM python:3.11-slim AS builder
 
@@ -29,14 +37,14 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
-    MODEL_A_PATH=/app/model/artifacts/model_a_tfidf_logreg.joblib \
-    RESULTS_DIR=/app/model/results \
-    FRONTEND_DIR=/app/frontend
+    MODEL_A_PATH=/app/model_v2/artifacts/model_a_tfidf_logreg.joblib \
+    RESULTS_DIR=/app/model_v2/results \
+    FRONTEND_DIR=/app/frontend-app/dist
 
 COPY backend/app/ ./app/
-COPY frontend/ ./frontend/
-COPY model/artifacts/model_a_tfidf_logreg.joblib ./model/artifacts/model_a_tfidf_logreg.joblib
-COPY model/results/ ./model/results/
+COPY --from=frontend-builder /fe/dist ./frontend-app/dist
+COPY model_v2/artifacts/model_a_tfidf_logreg.joblib ./model_v2/artifacts/model_a_tfidf_logreg.joblib
+COPY model_v2/results/ ./model_v2/results/
 
 RUN chown -R app:app /app
 USER app

@@ -1,8 +1,10 @@
 """
 Part B -- Model A: TF-IDF (static-embedding-style features) + Logistic
-Regression. The deployed model (see Part A's memory-footprint justification).
+Regression, for phishing-email detection. The deployed model (see Part A's
+memory-footprint justification).
 """
 import json
+import os
 import time
 
 import joblib
@@ -17,27 +19,36 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-from common import FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED, get_splits
+from common import FIGURES_DIR, LABEL_NAMES, MAX_CHARS, MODELS_DIR, RANDOM_SEED, RESULTS_DIR, get_splits
 
 PREPROCESSING_NOTES = """
 Data cleaning / preprocessing decisions (documented, not just applied)
 ------------------------------------------------------------------------
-- Missing values: none found -- every row in all three splits has non-empty
-  text and a valid 0/1 label (checked directly, not assumed).
-- Class imbalance: none -- verified directly, every split is exactly 50/50
-  (4265/4265 train, 533/533 val, 533/533 test). No resampling/class-weighting
-  needed; would have been misleading to add it unconditionally.
-- Text normalization: the dataset's text is already lowercased and has
-  punctuation space-separated from words by its original curators (verified
-  by inspection) -- no further normalization applied, to avoid silently
-  altering an already-standard benchmark's inputs in a way that would make
-  results harder to compare against published baselines.
+- Missing values: 19 rows had null/empty email text, plus a further 533
+  rows (~2.9%) carried the literal placeholder string "empty" as their
+  entire text -- a scraping artifact in the source dataset (found by
+  actually reading misclassified examples during the first training run,
+  not caught by a naive null check), not real email content. Both dropped.
+- Class imbalance: real and moderate -- 11,322 safe vs. 7,328 phishing
+  (~61/39). Not severe enough to require resampling/class-weighting for a
+  first baseline, but macro-averaged metrics (not raw accuracy alone) are
+  reported throughout specifically because of this imbalance.
+- Text length: extreme, checked directly -- median 159 words, but a long
+  tail out to one 3.5-million-word outlier (a data artifact, not a real
+  email). Rather than dropping long emails (losing real signal), raw text
+  is truncated to the first 20,000 characters before any processing --
+  generous enough to keep essentially all normal emails intact while
+  capping the pathological outliers' cost.
+- No further normalization applied (case/punctuation left as-is) so TF-IDF
+  can still pick up on phishing-typical surface patterns (ALL-CAPS urgency,
+  excessive punctuation) that lowercasing would destroy.
+- Split: dataset ships only a single 'train' split, so an 80/10/10
+  train/val/test split was created directly, stratified by label to
+  preserve the ~61/39 ratio in every split (fixed seed for reproducibility).
 - Tokenization/feature engineering (Model A specifically): TF-IDF over word
-  unigrams+bigrams -- unigrams alone lose negation/intensity patterns
-  ("not good" vs "good") that matter specifically for sentiment; bigrams
-  are cheap to add for a vocabulary this size (short reviews, ~21 words
-  average) and are the standard fix for exactly this weakness in classical
-  bag-of-words sentiment models.
+  unigrams+bigrams -- bigrams catch phishing-typical short phrases
+  ("verify account", "click here", "act now") that unigram bag-of-words
+  would lose the co-occurrence structure of.
 """.strip()
 
 
@@ -45,7 +56,7 @@ def build_pipeline(max_features=20000, ngram_max=2, C=1.0):
     return Pipeline([
         ("tfidf", TfidfVectorizer(max_features=max_features, ngram_range=(1, ngram_max),
                                     sublinear_tf=True)),
-        ("clf", LogisticRegression(C=C, max_iter=1000, random_state=SEED)),
+        ("clf", LogisticRegression(C=C, max_iter=1000, random_state=RANDOM_SEED, class_weight="balanced")),
     ])
 
 
@@ -65,8 +76,8 @@ def main():
     print(PREPROCESSING_NOTES)
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_splits()
     print(f"\nSplits: train={len(train_texts)} val={len(val_texts)} test={len(test_texts)}")
+    print(f"Train label balance: safe={train_labels.count(0)} phishing={train_labels.count(1)}")
 
-    # ---------------- Hyperparameter search (the required "iteration cycle" for Model A) ----
     print("\n########## Hyperparameter search (validation set) ##########")
     grid = [
         dict(max_features=10000, ngram_max=1, C=1.0),
@@ -92,16 +103,15 @@ def main():
     with open(RESULTS_DIR / "baseline_hparam_search.json", "w") as f:
         json.dump(search_results, f, indent=2)
 
-    # ---------------- Final evaluation on held-out test set --------------------------------
     print("\n########## Final evaluation (test set, best config) ##########")
     test_eval = evaluate(best_pipeline, test_texts, test_labels, "test")
-    print(classification_report(test_labels, test_eval["preds"], target_names=["negative", "positive"]))
+    print(classification_report(test_labels, test_eval["preds"], target_names=["safe", "phishing"]))
 
     cm = confusion_matrix(test_labels, test_eval["preds"])
     fig, ax = plt.subplots(figsize=(5, 4.5))
     im = ax.imshow(cm, cmap="Blues")
-    ax.set_xticks([0, 1]); ax.set_xticklabels(["negative", "positive"])
-    ax.set_yticks([0, 1]); ax.set_yticklabels(["negative", "positive"])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(["safe", "phishing"])
+    ax.set_yticks([0, 1]); ax.set_yticklabels(["safe", "phishing"])
     ax.set_xlabel("predicted"); ax.set_ylabel("true")
     for i in range(2):
         for j in range(2):
@@ -113,7 +123,6 @@ def main():
     fig.savefig(FIGURES_DIR / "baseline_confusion_matrix.png", dpi=130)
     plt.close(fig)
 
-    # ---------------- Error analysis --------------------------------------------------------
     print("\n########## Error analysis ##########")
     preds = np.array(test_eval["preds"])
     labels_arr = np.array(test_labels)
@@ -121,30 +130,26 @@ def main():
     print(f"Total misclassified: {len(errors)}/{len(test_texts)} ({100*len(errors)/len(test_texts):.1f}%)")
     sample_errors = errors[:8]
     for text, true, pred in sample_errors:
-        label_name = {0: "negative", 1: "positive"}
-        print(f"  true={label_name[true]:9s} pred={label_name[pred]:9s} text={text!r}")
+        print(f"  true={LABEL_NAMES[true]:9s} pred={LABEL_NAMES[pred]:9s} text={text[:150]!r}")
 
     error_analysis_discussion = """
 Error analysis, discussed
 -----------------------------
-Reviewing misclassified examples reveals a consistent pattern: TF-IDF's
-bag-of-(1,2)-grams representation cannot resolve sentiment that depends on
-*sentence-level* structure beyond adjacent-word pairs -- sarcasm, a
-sentiment-bearing clause negated or reversed by a later clause ("could have
-been great, but..."), and mixed reviews where positive and negative words
-both appear in similar proportion (the model has no mechanism to weigh
-*which* clause the reviewer's overall judgment ultimately rests on). This
-is exactly the class of error Task 27's contextual-vs-static-embeddings
-discussion predicts a Transformer should handle better, since self-attention
-lets a later clause's sentiment-reversing signal directly inform how an
-earlier clause's words are weighted -- tested directly in the Model B
-comparison below, not just assumed.
+Reviewing misclassified examples: TF-IDF's bag-of-(1,2)-grams representation
+struggles specifically with well-crafted phishing that mimics legitimate
+corporate/transactional language closely (no obviously "spammy" vocabulary
+to key on), and with legitimate emails that happen to use urgency-adjacent
+phrasing (real password-reset or billing emails). Both error types share a
+root cause: TF-IDF has no way to model the *global coherence* of an email
+(does the sender/domain/link structure match the claimed identity?) --  it
+only sees local word co-occurrence. This is exactly the class of error
+Task 27's contextual-vs-static-embeddings discussion predicts a Transformer
+should handle better, tested directly in the Model B comparison below, not
+just assumed.
 """.strip()
     print("\n" + error_analysis_discussion)
 
-    # ---------------- Save artifacts ---------------------------------------------------------
     joblib.dump(best_pipeline, MODELS_DIR / "model_a_tfidf_logreg.joblib")
-    import os
     artifact_size_kb = os.path.getsize(MODELS_DIR / "model_a_tfidf_logreg.joblib") / 1024
 
     results = dict(
@@ -162,6 +167,7 @@ comparison below, not just assumed.
         sample_errors=[dict(text=t, true=int(tr), pred=int(pr)) for t, tr, pr in sample_errors],
         error_analysis_discussion=error_analysis_discussion,
         artifact_size_kb=artifact_size_kb,
+        max_chars_cap=MAX_CHARS,
     )
     with open(RESULTS_DIR / "baseline_results.json", "w") as f:
         json.dump(results, f, indent=2)

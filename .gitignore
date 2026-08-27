@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 data/
 .claude/
+.impeccable/
 *.log
 
 # DistilBERT fine-tuned weights (~268MB, over GitHub's 100MB hard limit) --
@@ -16,7 +17,7 @@ Day_28/.env
 # Day 29 capstone -- Model B (fine-tuned DistilBERT, ~268MB) is trained and
 # evaluated but deliberately not deployed (see docs/part_a_scope_and_planning.md
 # and FINAL_REPORT.md) and exceeds GitHub's 100MB hard limit -- reproducible
-# via `python model/train_transformer.py`. The final state_dict is kept out
+# via `python model_v2/train_transformer.py`. The final state_dict is kept out
 # of git; the best-epoch checkpoint (same reasoning) is too.
-Day_29/model/artifacts/model_b_distilbert_final.pt
-Day_29/model/artifacts/model_b_distilbert_checkpoint.pt
+Day_29/model_v2/artifacts/model_b_distilbert_final.pt
+Day_29/model_v2/artifacts/model_b_distilbert_checkpoint.pt

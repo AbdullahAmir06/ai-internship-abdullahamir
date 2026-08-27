@@ -1,10 +1,11 @@
 """
-Part B -- Model B: fine-tuned DistilBERT (contextual embeddings), the
-comparison model. Trained and evaluated for a genuine, measured Model A
-vs. Model B trade-off -- not deployed live (see Part A's justification,
-grounded in Task 28's measured OOM finding).
+Part B -- Model B: fine-tuned DistilBERT (contextual embeddings) for
+phishing-email detection. Trained and evaluated for a genuine, measured
+Model A vs. Model B trade-off -- not deployed live (see Part A's
+justification, grounded in Task 28's measured OOM finding).
 """
 import json
+import os
 import time
 
 import matplotlib
@@ -12,20 +13,24 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import (
     accuracy_score, precision_recall_fscore_support, confusion_matrix, classification_report,
 )
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
 
-from common import FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED, get_splits
+from common import FIGURES_DIR, LABEL_NAMES, MODELS_DIR, RANDOM_SEED, RESULTS_DIR, get_splits
 
 MODEL_NAME = "distilbert-base-uncased"
-MAX_LEN = 64
+# Longer than the movie-review capstone's 64 -- emails run much longer
+# (median 159 words vs. ~21), and phishing cues often live past the first
+# sentence (a greeting, then the urgency/link later). 128 is a deliberate
+# middle ground: enough to catch that structure without blowing up
+# training time on a CPU-only, resource-contended machine.
+MAX_LEN = 128
 
 
-class ReviewDataset(Dataset):
+class EmailDataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_len=MAX_LEN):
         self.encodings = tokenizer(texts, padding="max_length", truncation=True,
                                      max_length=max_len, return_tensors="pt")
@@ -61,14 +66,14 @@ def run_epoch(model, loader, optimizer=None, device="cpu"):
 
 
 def main():
-    torch.manual_seed(SEED)
+    torch.manual_seed(RANDOM_SEED)
     print("Loading data and tokenizer...")
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_splits()
     tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_NAME)
 
-    train_ds = ReviewDataset(train_texts, train_labels, tokenizer)
-    val_ds = ReviewDataset(val_texts, val_labels, tokenizer)
-    test_ds = ReviewDataset(test_texts, test_labels, tokenizer)
+    train_ds = EmailDataset(train_texts, train_labels, tokenizer)
+    val_ds = EmailDataset(val_texts, val_labels, tokenizer)
+    test_ds = EmailDataset(test_texts, test_labels, tokenizer)
     train_loader = DataLoader(train_ds, batch_size=16, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
@@ -95,7 +100,6 @@ def main():
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
-            # checkpointing: save best-so-far, not just final epoch
             torch.save(best_state, MODELS_DIR / "model_b_distilbert_checkpoint.pt")
     total_train_time = time.time() - t_start
     model.load_state_dict(best_state)
@@ -129,13 +133,13 @@ def main():
     acc = accuracy_score(labels_arr, preds)
     p, r, f1, _ = precision_recall_fscore_support(labels_arr, preds, average="macro", zero_division=0)
     print(f"test accuracy={acc:.4f} macro_P={p:.4f} macro_R={r:.4f} macro_F1={f1:.4f}")
-    print(classification_report(labels_arr, preds, target_names=["negative", "positive"]))
+    print(classification_report(labels_arr, preds, target_names=["safe", "phishing"]))
 
     cm = confusion_matrix(labels_arr, preds)
     fig, ax = plt.subplots(figsize=(5, 4.5))
     im = ax.imshow(cm, cmap="Greens")
-    ax.set_xticks([0, 1]); ax.set_xticklabels(["negative", "positive"])
-    ax.set_yticks([0, 1]); ax.set_yticklabels(["negative", "positive"])
+    ax.set_xticks([0, 1]); ax.set_xticklabels(["safe", "phishing"])
+    ax.set_yticks([0, 1]); ax.set_yticklabels(["safe", "phishing"])
     ax.set_xlabel("predicted"); ax.set_ylabel("true")
     for i in range(2):
         for j in range(2):
@@ -147,14 +151,12 @@ def main():
     fig.savefig(FIGURES_DIR / "transformer_confusion_matrix.png", dpi=130)
     plt.close(fig)
 
-    # error analysis
     errors_idx = [i for i in range(len(test_texts)) if preds[i] != labels_arr[i]]
-    sample_errors = [dict(text=test_texts[i], true=int(labels_arr[i]), pred=int(preds[i]))
+    sample_errors = [dict(text=test_texts[i][:400], true=int(labels_arr[i]), pred=int(preds[i]))
                       for i in errors_idx[:8]]
     print(f"\nTotal misclassified: {len(errors_idx)}/{len(test_texts)} "
           f"({100*len(errors_idx)/len(test_texts):.1f}%)")
 
-    import os
     torch.save(model.state_dict(), MODELS_DIR / "model_b_distilbert_final.pt")
     artifact_size_mb = os.path.getsize(MODELS_DIR / "model_b_distilbert_final.pt") / 1e6
 

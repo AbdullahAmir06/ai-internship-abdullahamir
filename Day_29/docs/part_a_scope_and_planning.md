@@ -1,97 +1,78 @@
-# Part A — Capstone Kickoff: Scope & Planning
+# Part A — Capstone Kickoff, Scope & Planning
 
-**Project**: Movie Review Sentiment Dashboard
-**PKCERT AI & Software Development Internship — Final Capstone Task**
-Author: Abdullah Amir
+**Project**: Phishing Email Inspection Desk
 
-## 1. Project idea and how it integrates the internship
+## Problem statement
 
-A web dashboard that classifies the sentiment (positive/negative) of a movie review, live,
-via a trained model served through a REST API — the brief's suggested "sentiment analysis
-dashboard" direction. Deliberately built to **integrate specific prior work**, not just reuse
-a generic template:
+Phishing email remains one of the most common initial-access vectors in real security
+incidents, and most people have no fast, free way to sanity-check a suspicious email beyond
+"does this feel off." This project builds a live tool that classifies pasted email text as
+**phishing** or **safe**, with a measured confidence score, in under a second, no account
+required.
 
-- **Task 25/27 (embeddings, static vs. contextual)**: the modeling approach directly
-  reproduces and extends Task 27's central comparison — static embeddings (TF-IDF) feeding a
-  classical classifier, versus a fine-tuned Transformer's contextual embeddings — as this
-  capstone's actual model-selection decision, not a side note.
-- **Task 26/27 (Hugging Face `transformers`)**: the contextual-embedding model is a
-  fine-tuned DistilBERT, the same model family used in Tasks 26–28.
-- **Task 28 (FastAPI microservice, Docker, deployment)**: the backend reuses the proven
-  async-FastAPI-plus-Pydantic-validation pattern, and — critically — **directly applies the
-  memory-constraint lesson Task 28 learned the hard way** (a 3-model, all-Transformer service
-  OOM'd on every free-tier host tried). This capstone's deployed model is deliberately the
-  lightweight classical one, with the heavier Transformer trained, evaluated, and reported
-  on, but not live-served — an explicit engineering decision grounded in Task 28's own
-  measured findings, not a limitation discovered fresh here.
+## Why this project (integration requirement)
 
-## 2. Problem statement
+This capstone must demonstrably integrate skills from across the internship. It does so
+directly, not decoratively:
 
-**Target user**: anyone who wants a quick, free, no-signup sentiment read on a piece of
-movie-review-style text — a student checking a draft review's tone, a small blog operator
-triaging reader comments, or simply a demonstration audience evaluating this capstone.
+- **Data/text processing**: real-world email text (HTML-artifact placeholder rows, an extreme
+  length outlier, class imbalance) required actual cleaning decisions, not a pre-cleaned
+  benchmark.
+- **Embeddings and Transformer-based modeling (Task 27)**: the project's central architectural
+  decision *is* Task 27's static-vs-contextual embeddings comparison — TF-IDF (static) vs.
+  fine-tuned DistilBERT (contextual) — trained and evaluated on the same phishing-detection
+  task, so the comparison is a real, measured result specific to this domain.
+- **Full-stack API/frontend development (Task 28 and this capstone's Part C)**: a FastAPI
+  backend and a React/Framer Motion frontend, integrated end-to-end, deployed live.
+- **Production engineering (Task 28)**: this project's deployment decision is a direct,
+  deliberate application of Task 28's measured lesson — a Transformer-sized model does not fit
+  a free-tier host's memory budget — reused here rather than rediscovered.
 
-**Core functionality**: paste or type a review; get back a sentiment label (positive/
-negative) with a confidence score, in under a second, with no account required.
+## In scope
 
-**Value provided**: removes the need to read manually through many short text snippets to
-gauge overall sentiment — useful at the scale of even a few dozen reviews, where a human
-skim is slow and inconsistent, and a full commercial NLP API is unnecessary overhead for a
-binary classification task this well-scoped.
+- Binary classification: phishing vs. safe email text.
+- A live prediction tool (paste text, get a verdict + confidence).
+- A model-comparison view surfacing both models' real measured metrics.
+- Local + Docker + live cloud deployment, with a measured memory-budget proof.
 
-## 3. Scope
+## Out of scope
 
-**In scope**:
-- Binary sentiment classification (positive/negative) for short, review-style English text.
-- A trained-and-evaluated comparison of two modeling approaches (static-embedding classical
-  ML vs. fine-tuned Transformer), both documented, one deployed.
-- A REST API exposing prediction and basic model-info endpoints.
-- A single-page dashboard: live prediction, and a static comparison view of both models'
-  measured performance (accuracy/F1/latency/size) so the deployment trade-off is visible to
-  the user, not just buried in documentation.
-- Local functional testing, Docker containerization, and an attempted live deployment.
+- Multi-class classification (e.g. spam vs. phishing vs. malware-laden vs. safe) — binary
+  keeps the task well-defined and the evaluation unambiguous.
+- Non-English text — the dataset is English-only; claiming broader coverage would be
+  unverified.
+- Accounts, history, or persistence — a stateless, public tool needs none of these.
+- **Generating phishing content** — this tool detects, it never produces or templates
+  phishing text, even illustratively. This boundary is treated as a hard constraint, not a
+  style choice.
 
-**Out of scope** (explicitly, to prevent scope creep):
-- Multi-class or fine-grained (1–5 star) sentiment — binary only, matching the chosen dataset
-  and keeping the problem tractable within this capstone's timebox.
-- User accounts, saved history, or any per-user personalization — see §4 (auth) below.
-- Non-English text, or domains far from movie/product reviews (the training data is
-  review-specific; the model is not claimed to generalize further).
-- Real-time model retraining or online learning from user submissions.
-- A mobile app or native client — web dashboard only.
+## Tech stack justification
 
-## 4. Technical stack, justified per layer
-
-| Layer | Choice | Justification |
+| Layer | Choice | Why |
 |---|---|---|
-| Data | `rotten_tomatoes` (Hugging Face `datasets`) | Small (10,662 rows total), binary-labeled, a standard NLP benchmark with a canonical train/val/test split already defined — avoids ad hoc splitting decisions and enables comparison against a well-known baseline. Permissively licensed for research/education use. |
-| Model A (deployed) | TF-IDF vectorization + Logistic Regression (`scikit-learn`) | Static-embedding-style features (Task 27's "sparse-but-classical" side of its own embeddings comparison, extended here to a TF-IDF variant), trivial memory footprint (~a few MB serialized), sub-millisecond inference, no deep-learning runtime dependency at serving time at all — directly addresses Task 28's measured OOM finding. |
-| Model B (trained, evaluated, not deployed) | Fine-tuned `distilbert-base-uncased` (Hugging Face `transformers`) | The contextual-embedding counterpart — reuses Tasks 26–28's proven fine-tuning pattern, expected to outperform Model A on accuracy at the cost of a ~270MB+ runtime footprint that Task 28 already measured as exceeding common free-tier hosting limits. |
-| Backend/API | FastAPI (Python, async) | Directly reuses Task 28's proven pattern: Pydantic request/response validation, `run_in_threadpool` for CPU-bound inference, structured logging, `/healthz`. Serves Model A only (see above). |
-| Frontend/UI | Static HTML/CSS/JS, served by FastAPI itself | The same single-container pattern verified working end-to-end in Task 28 — one deployable unit, no separate frontend hosting, no build step, minimal moving parts to keep this capstone's own scope tight. |
-| Auth | **Out of scope, justified**: this is a stateless, public demo tool with no user-specific data, no persistence, and no action a user could take that requires attribution or protection. Adding accounts/JWT would be complexity with no corresponding functional need, working against §3's explicit scope-creep prevention. |
-| Deployment target | Docker container; live deploy attempted on Render (free tier), informed directly by Task 28's measured constraints — Model A's tiny footprint is specifically chosen to fit where Task 28's all-Transformer service did not. |
+| Data source | `zefang-liu/phishing-email-dataset` (Hugging Face) | 18,650 real emails, permissively hosted, large enough for a meaningful Model A/B comparison |
+| Model A | TF-IDF + Logistic Regression (scikit-learn) | Static-embedding-style features, sub-millisecond inference, deployable within a strict memory budget |
+| Model B | Fine-tuned `distilbert-base-uncased` (Hugging Face `transformers`) | Contextual embeddings, the direct comparison point for Model A — evaluated, not deployed, per the memory-budget finding below |
+| Backend | FastAPI, async, Pydantic validation | Proven pattern from Task 28, reused rather than reinvented |
+| Frontend | React + Vite + Framer Motion | Portfolio-grade presentation for this capstone's evaluative audience; builds to static assets, so it adds no runtime cost to the deploy target |
+| Deployment | Docker (multi-stage, Node build stage + Python runtime), Render free tier | Single container, same proven pattern; memory budget is the binding constraint that shapes the whole architecture |
 
-## 5. Execution plan
+## Execution plan & risk
 
-| Stage | Depends on | Key risk | Mitigation |
+| Phase | Depends on | Risk | Mitigation |
 |---|---|---|---|
-| B1: Data prep | — | Class imbalance or noisy labels | Verified dataset is balanced by construction (canonical benchmark); inspect label distribution directly rather than assuming. |
-| B2: Model A training | B1 | Underfitting on a simple bag-of-words representation | Compare against Model B directly — if the gap is large, that itself is the reported finding, not a failure. |
-| B3: Model B training | B1 | Long CPU fine-tuning time (no GPU available) | Small dataset (8,530 train rows) and a distilled model keep this tractable; benchmark one epoch before committing to a full run (the lesson from Task 24's un-timed-first-attempt mistake). |
-| B4: Comparison & iteration | B2, B3 | — | This comparison *is* the required iteration cycle. |
-| C: Backend + frontend | B2 (needs Model A's serialized artifact) | API/UI drift from scope | Cross-check every endpoint and UI element against §3 before building. |
-| D: Testing, deploy, docs | C | Live deploy may hit a resource or platform constraint (as Task 28 did) | Model A's footprint is deliberately tiny specifically to avoid a repeat; if it still fails, document the real cause rather than silently retrying, matching Task 28's own precedent. |
-| E: Presentation & wrap-up | D | — | Last stage; no new features introduced here, per the brief's own instruction. |
+| A: Scope & planning | — | Scope creep into multi-class/generation features | This document, revisited before each later part |
+| B: Data prep & modeling | A | Real data-quality issues (found: placeholder "empty" text, extreme length outlier) | Verify by reading actual misclassified examples, not just aggregate metrics |
+| C: Backend & frontend | B | Frontend ambition outruns the graded substance | Every UI number is wired to a real API response, never hardcoded |
+| D: Testing, deploy, docs | C | Live deploy may still hit a resource constraint | Model A's footprint is deliberately tiny specifically to avoid a repeat of Task 28's failure; if it still fails, document the real cause honestly |
+| E: Presentation & wrap-up | D | Rushed, unverified demo | Screenshot/interaction-verify before presenting, per this project's own established practice |
 
-## 6. Success criteria and evaluation metrics (revisited in Part D)
+## Success criteria
 
 | Criterion | Target |
 |---|---|
-| Model A (deployed) test accuracy | ≥ 75% (rotten_tomatoes' published classical-ML baselines cluster in the high-70s/low-80s) |
-| Model A macro F1 | ≥ 0.75 |
-| Model B (comparison) test accuracy | Meaningfully above Model A's, demonstrating contextual embeddings' value — expected high-80s, consistent with published DistilBERT fine-tuning results on this dataset |
-| API p50 latency (Model A, local) | < 50ms per request (no neural-network forward pass at serving time) |
-| API correctness | All endpoints return schema-valid responses for valid input, and structured 4xx errors for invalid input (reusing Task 28's validation pattern) |
-| UI usability | A first-time user can get a prediction within one input + one click, with no instructions required |
-| Deployment | A live, publicly reachable URL, OR — if a genuine platform constraint blocks it despite Model A's small footprint — a fully documented reason plus a verified-working local/Docker alternative (Task 28's own precedent for how to report this honestly) |
+| Model A (deployed) test accuracy | ≥ 90% (phishing/safe text carries stronger lexical signal than sentiment; a high bar is appropriate and was met — see FINAL_REPORT.md) |
+| Model B test accuracy | Reported, whatever it measures — not a target to hit, a comparison point |
+| API latency (Model A) | p50 well under 50ms |
+| Deployment | A live, publicly reachable URL, verified working, under the same measured memory constraint that failed in an earlier project |
+| Detection-only boundary | Verified in code review and copy: no UI element or endpoint produces phishing-style content |

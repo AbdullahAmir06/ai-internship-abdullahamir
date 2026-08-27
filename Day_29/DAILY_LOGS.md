@@ -33,7 +33,7 @@ constitute the contemporaneous record of what was built and delivered each day. 
 | 26 | Introduction to Transformers & attention (conceptual) | Attention/Transformer derivations, applied DistilBERT vs. Task 25's LSTM |
 | 27 | NLP basics: tokenization, Word2Vec/GloVe, Hugging Face embeddings | From-scratch BPE tokenizer, static-vs-contextual embeddings comparison |
 | 28 | Production LLM serving, async microservices & full-stack deployment | FastAPI microservice, Docker, real deployment attempt (Render OOM finding, documented) |
-| 29 | **Capstone**: Movie Review Sentiment Dashboard | This project — see `FINAL_REPORT.md` |
+| 29 | **Capstone**: Phishing Email Inspection Desk | This project — see `FINAL_REPORT.md` |
 
 ## Notes on how these logs were compiled
 
