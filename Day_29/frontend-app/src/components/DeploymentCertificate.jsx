@@ -16,17 +16,15 @@ export default function DeploymentCertificate() {
       <div className="cert-inner">
         <motion.div
           className="cert-card"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.97 }}
+          whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5, ease: [0.34, 1.2, 0.64, 1] }}
         >
-          <div className="cert-header">
-            <ShieldCheck size={22} strokeWidth={2} color="var(--cleared)" />
-            <span className="mono">DEPLOYMENT VERIFICATION</span>
-          </div>
-
-          <h2>Cleared for the same limit that failed before.</h2>
+          <h2>
+            <ShieldCheck size={26} strokeWidth={2} color="var(--cleared)" className="cert-h2-icon" />
+            Verified: cleared for the same limit that failed before.
+          </h2>
           <p className="measure cert-sub">
             Run under a hard <code className="mono">--memory=512m</code> cap — the exact
             ceiling that caused the earlier build's out-of-memory failure — and verified
@@ -71,13 +69,14 @@ export default function DeploymentCertificate() {
           border-radius: 8px;
           padding: 3rem clamp(1.5rem, 4vw, 3.5rem);
         }
-        .cert-header {
-          display: flex; align-items: center; gap: 0.6rem;
-          color: var(--cleared);
-          font-size: 0.75rem; letter-spacing: 0.1em;
-          margin-bottom: 1.5rem;
+        .cert-card h2 {
+          font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+          max-width: 22ch;
+          display: flex;
+          align-items: center;
+          gap: 0.7rem;
         }
-        .cert-card h2 { font-size: clamp(1.8rem, 3.4vw, 2.6rem); max-width: 20ch; }
+        .cert-h2-icon { flex-shrink: 0; }
         .cert-sub { margin-top: 1rem; color: var(--text-dim); }
         .cert-sub code { color: var(--lamp-bright); background: var(--ink); padding: 0.1rem 0.4rem; border-radius: 3px; }
 

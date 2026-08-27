@@ -42,7 +42,6 @@ export default function InspectionHero() {
       <div className="hero-beam" aria-hidden="true" />
       <div className="hero-inner">
         <div className="hero-top">
-          <span className="hero-kicker mono">CASE INTAKE · EMAIL AUTHENTICATION</span>
           <HealthBadge />
         </div>
 
@@ -51,9 +50,9 @@ export default function InspectionHero() {
           <br />under the right light.
         </h1>
         <p className="hero-sub measure">
-          Paste a suspicious email below. A trained model inspects it and returns an
-          evidence-backed verdict — safe or phishing — with a real, measured confidence
-          score. No account, no upload, nothing stored.
+          This is case intake for suspicious email. Paste the text below and a trained
+          model inspects it, then returns an evidence-backed verdict — safe or phishing —
+          with a real, measured confidence score. No account, no upload, nothing stored.
         </p>
 
         <div className="desk">
@@ -161,11 +160,8 @@ export default function InspectionHero() {
         }
         .hero-inner { position: relative; width: 100%; max-width: 1180px; margin: 0 auto; }
         .hero-top {
-          display: flex; justify-content: space-between; align-items: center;
+          display: flex; justify-content: flex-end; align-items: center;
           margin-bottom: 2.6rem;
-        }
-        .hero-kicker {
-          font-size: 0.72rem; letter-spacing: 0.12em; color: var(--lamp-bright);
         }
         .hero-title {
           font-size: clamp(2.6rem, 6vw, 5rem);

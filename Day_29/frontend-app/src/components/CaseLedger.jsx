@@ -42,24 +42,11 @@ export default function CaseLedger() {
   return (
     <section className="ledger-section">
       <div className="ledger-inner">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          Two models, one case file.
-        </motion.h2>
-        <motion.p
-          className="ledger-sub measure"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <h2>Two models, one case file.</h2>
+        <p className="ledger-sub measure">
           Every figure below is a measured result from this project's own training and
           evaluation runs — not a projection. Only one model is on duty.
-        </motion.p>
+        </p>
 
         {error && <p className="mono error-text">Could not load case file: {error}</p>}
 

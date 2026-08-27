@@ -1,26 +1,11 @@
-import { motion } from "framer-motion";
-
 export default function FacilityBlueprint() {
   return (
     <section className="blueprint-section">
       <div className="blueprint-inner">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          The facility floor plan.
-        </motion.h2>
-        <motion.div
-          className="blueprint-frame"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <h2>The facility floor plan.</h2>
+        <div className="blueprint-frame">
           <img src="/architecture.png" alt="System architecture diagram" />
-        </motion.div>
+        </div>
       </div>
 
       <style>{`
