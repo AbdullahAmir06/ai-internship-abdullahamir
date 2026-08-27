@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+data/
+*.log
+model/artifacts/model_b_distilbert_final.pt
+model/artifacts/model_b_distilbert_checkpoint.pt
+model/figures/
+tests/
+docs/
+presentation/

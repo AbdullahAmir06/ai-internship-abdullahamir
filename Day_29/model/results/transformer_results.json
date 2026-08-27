@@ -1,0 +1,94 @@
+{
+  "config": {
+    "model": "distilbert-base-uncased",
+    "max_len": 64,
+    "batch_size": 16,
+    "epochs": 3,
+    "lr": 2e-05,
+    "optimizer": "AdamW",
+    "loss": "CrossEntropyLoss (via model's own head)"
+  },
+  "history": {
+    "train_loss": [
+      0.42258396393249353,
+      0.22838227547888598,
+      0.1101062694180141
+    ],
+    "train_acc": [
+      0.8031652989449003,
+      0.911137162954279,
+      0.9636576787807737
+    ],
+    "val_loss": [
+      0.3381042495006468,
+      0.3467558944147031,
+      0.5211891771257483
+    ],
+    "val_acc": [
+      0.8414634146341463,
+      0.8433395872420263,
+      0.8414634146341463
+    ]
+  },
+  "total_train_time_s": 3000.5971875190735,
+  "best_val_acc": 0.8433395872420263,
+  "test_accuracy": 0.8527204502814258,
+  "test_macro_precision": 0.8527514926213811,
+  "test_macro_recall": 0.8527204502814258,
+  "test_macro_f1": 0.8527172100382723,
+  "avg_latency_ms": 27.58119491969838,
+  "confusion_matrix": [
+    [
+      452,
+      81
+    ],
+    [
+      76,
+      457
+    ]
+  ],
+  "n_errors": 157,
+  "sample_errors": [
+    {
+      "text": "it's like a \" big chill \" reunion of the baader-meinhof gang , only these guys are more harmless pranksters than political activists .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "weighty and ponderous but every bit as filling as the treat of the title .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "mostly , [goldbacher] just lets her complicated characters be unruly , confusing and , through it all , human .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "at its worst , the movie is pretty diverting ; the pity is that it rarely achieves its best .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "devotees of star trek ii : the wrath of khan will feel a nagging sense of deja vu , and the grandeur of the best next generation episodes is lacking .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "the main story . . . is compelling enough , but it's difficult to shrug off the annoyance of that chatty fish .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "reminiscent of alfred hitchcock's thrillers , most of the scary parts in 'signs' occur while waiting for things to happen .",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "if not a home run , then at least a solid base hit .",
+      "true": 1,
+      "pred": 0
+    }
+  ],
+  "artifact_size_mb": 267.862461
+}
