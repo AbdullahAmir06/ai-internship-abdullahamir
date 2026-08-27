@@ -237,7 +237,24 @@ capstone-test   0.10%     113MiB / 512MiB     22.07%
 All endpoints (including a live prediction) and the frontend were confirmed working through
 this exact capped container, not just the uncapped bare process.
 
-**Live cloud deployment**: <!-- LIVE_DEPLOY_STATUS_PLACEHOLDER -->
+**Live cloud deployment**: succeeded, on the first attempt, on the same platform (Render,
+free tier, 512MB) that failed for Task 28's larger 3-model service. Deployed via Render's API
+(`day29-sentiment-dashboard`, Docker runtime, GitHub `main` branch auto-deploy — Render's own
+commit-triggered rebuild is the CI/CD pipeline, matching Task 28's pattern) and verified live,
+not just assumed from a successful build:
+
+```
+$ curl https://day29-sentiment-dashboard.onrender.com/healthz
+{"status":"ok","model_loaded":true,"uptime_s":39.75}
+
+$ curl -X POST https://day29-sentiment-dashboard.onrender.com/api/v1/predict \
+  -d '{"text": "This movie was an absolute masterpiece, brilliant acting and a beautiful story."}'
+{"label":"positive","confidence":0.6507,"latency_ms":5.78}
+```
+
+`/api/v1/models` and the frontend (`/`) were confirmed live too. This is the direct payoff of
+Part A's deployment decision: the same free-tier memory ceiling that OOM'd Task 28's service
+is comfortably cleared here, on the first deploy, with no mitigation attempts needed.
 
 ### D3. Documentation
 

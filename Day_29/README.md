@@ -19,10 +19,10 @@ document, and `FINAL_REPORT.md` for the complete capstone report (Parts B–E).
 | **Problem** | Quick, free, no-signup sentiment classification for movie-review-style text |
 | **Data** | [`rotten_tomatoes`](https://huggingface.co/datasets/rotten_tomatoes) (HF `datasets`), 8,530/1,066/1,066 train/val/test, binary, balanced |
 | **Model A (deployed)** | TF-IDF (unigrams+bigrams) + Logistic Regression — **78.7% test accuracy**, 1.4MB artifact |
-| **Model B (trained, compared)** | Fine-tuned DistilBERT — contextual-embeddings comparison, see `FINAL_REPORT.md` for its measured results |
+| **Model B (trained, compared)** | Fine-tuned DistilBERT — **85.3% test accuracy**, 268MB artifact, not deployed (see `FINAL_REPORT.md` for the full trade-off) |
 | **Backend** | FastAPI, async, Pydantic-validated, serves Model A only |
 | **Frontend** | Static HTML/CSS/JS dashboard, served from the same container |
-| **Deployment** | Docker (multi-stage, non-root, ~a few hundred MB image — no torch/transformers at runtime) |
+| **Deployment** | Docker (multi-stage, non-root, 645MB image — no torch/transformers at runtime); **live at [day29-sentiment-dashboard.onrender.com](https://day29-sentiment-dashboard.onrender.com)** (Render free tier) |
 
 ## Architecture
 
