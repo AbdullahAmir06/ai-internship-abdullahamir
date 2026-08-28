@@ -1,0 +1,91 @@
+{
+  "config": {
+    "model": "distilbert-base-uncased",
+    "max_len": 96,
+    "batch_size": 16,
+    "epochs": 2,
+    "lr": 2e-05,
+    "optimizer": "AdamW",
+    "loss": "CrossEntropyLoss (via model's own head)",
+    "train_examples": 6000
+  },
+  "history": {
+    "train_loss": [
+      0.1695081823244691,
+      0.0394493868711094
+    ],
+    "train_acc": [
+      0.939,
+      0.989
+    ],
+    "val_loss": [
+      0.07012589110154144,
+      0.07659462786572908
+    ],
+    "val_acc": [
+      0.9767955801104973,
+      0.9784530386740331
+    ]
+  },
+  "total_train_time_s": 1990.5281369686127,
+  "best_val_acc": 0.9784530386740331,
+  "test_accuracy": 0.9773480662983426,
+  "test_macro_precision": 0.9764546083687108,
+  "test_macro_recall": 0.9756825878073272,
+  "test_macro_f1": 0.9760654518456306,
+  "avg_latency_ms": 46.0917291614512,
+  "confusion_matrix": [
+    [
+      1094,
+      19
+    ],
+    [
+      22,
+      675
+    ]
+  ],
+  "n_errors": 41,
+  "sample_errors": [
+    {
+      "text": "To be taken off this mailing list, simply hit your\nreply button and put \"Remove\" anywhere in the subject.\n----------------------------------------------------------\n  If Amateurs is what you want,  Then we Have them.\nTake a look at these HARDCORE sites.  Young HOTTT TEENS !!!These are The BEST of the BEST when it comes to Amateurs.\nDon't believe me?   Take a look for yourself.  \n  Amateur Petite\n-",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "riskbrief - january issue riskbrief - http : / / www . financewise . com / risk dear risk brief subscriber , it \u0001 , s been a while since you last received your monthly ' risk brief ' update from financewise . but not without good reason - we ' ve changed a lot . we have launched an exciting online news product called ' risknews ' . this free website provides dedicated global coverage of all the to",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "congratulations congratulations on your expanded role . i hope this means you get lots more money and fewer hours !",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "You're in luck because my mom sends these all the time and I never\nhave anything else to do with them ... An old man lived alone in Minnesota. He wanted to spade his potato garden,\nbut it was very hard work.\n His only son, who would have helped him, was in Prison. The old man  wrote\na  letter to his son and mentioned his predicament.\n Shortly, he received this reply, \"For heaven's sake Dad, don't ",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "srd louie fabian worthing was made a master mason in ganado lodge no . 1055 on march 12 , 1914 , affiliated with wharton lodge n . 621 on april 8 , 1916 . ? he was elected secretary inn 1916 , junior warden in 1917 , and worshipful master in 1920 . ? he was again secretary in 1921 to 1938 . ? he was awarded fifty year masonic service award on april 14 1964 . ? he was a scottish rite and york rite ",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "Could you please send the address of your agent in Saudi Arabia.Thanks\nSathar",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "I saw your email on a website I visited yesterday, and thought\nyou might be interested in this. A few months back I joined a program and then...promptly forgot\nabout it. You may have done this yourself sometime...you intend\nto work the program but then get caught in your day-to-day\nactivities and it's soon forgotten.The program was free to join so maybe I just didn't take it very\nseriously.Anyway,",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "FORD SALUTES THE MILITARY.THIS OFFER IS EXTENDED EXCLUSIVELY TO ALL ACTIVE DUTY, RESERVE, RETIRED, MILITARY VETERANS AND THEIR DIRECT DEPENDANTS ONLY.** DELIVERY TO ANY MILITARY INSTALLATION OR THE CLOSEST PORT IS AVAILABLE. **ROLLING HILLS FORD, Inc. LOCATED IN CLERMONT, FLORIDA, IS OFFERING DURING THE MONTHS OF AUGUST AND SEPTEMBER 2002, A PERSONAL INVITATION.  FOR A LIMITED TIME, A SPECIALTY PE",
+      "true": 1,
+      "pred": 0
+    }
+  ],
+  "artifact_size_mb": 267.862461
+}

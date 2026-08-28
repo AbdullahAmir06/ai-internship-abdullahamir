@@ -62,14 +62,32 @@ Training configuration:
 | Parameter | Value |
 |---|---|
 | Base model | `distilbert-base-uncased` |
-| Max sequence length | 128 tokens (longer than a prior iteration's 64 — emails run far longer than short review snippets; phishing cues often appear past the first sentence) |
+| Max sequence length | 96 tokens |
+| Training examples | 6,000 (stratified subsample of the ~14,500-row training split) |
 | Batch size | 16 |
-| Epochs | 3 |
+| Epochs | 2 |
 | Optimizer | AdamW |
 | Learning rate | 2e-5 |
 | Checkpointing | Best validation-accuracy checkpoint saved each epoch it improves |
 
-<!-- MODEL_B_TRAINING_CURVES_PLACEHOLDER -->
+**A real, disclosed constraint shaped this configuration, not a design preference.** An
+initial attempt used the full training set (~14,500 rows) at 128 tokens, matching a prior
+iteration's approach. It was killed after **12.8 wall-clock hours still short of finishing
+even epoch 1 of 3** — verified via `uptime`/`free -h` as genuine, sustained system-wide
+resource contention (load average consistently above 12 on a 12-core machine, 8GB+ swapped),
+not a bug or a hang. Rather than keep waiting on an uncontrollable external constraint, the
+run was restarted at this leaner configuration — a 6,000-example stratified subsample and a
+shorter 96-token context — which completed both epochs in under 40 minutes total. This is
+the same category of decision as Part A's Model A/B deployment choice: adapt the plan to a
+measured real-world constraint rather than assume it away.
+
+Training/validation curves: `model_v2/figures/transformer_curves.png`. With only 2 epochs on
+a smaller sample, the pattern is compressed but already visible: training loss drops sharply
+(0.170 → 0.039) while validation loss ticks up slightly (0.070 → 0.077) between epoch 1 and
+2 — the same overfitting-begins-early signal seen in a prior iteration's fuller run, arriving
+faster here specifically because the training set is smaller. The saved checkpoint is
+epoch 2's (best validation accuracy, 97.85%), not epoch 1's, since accuracy still edged
+upward even as loss started to turn.
 
 ### B3. Model evaluation & iteration
 
@@ -80,13 +98,24 @@ a phishing-detection task rather than sentiment.
 
 | Metric | Model A (TF-IDF + LogReg) | Model B (fine-tuned DistilBERT) |
 |---|---|---|
-| Test accuracy | **98.45%** | <!-- MODEL_B_ACC --> |
-| Test macro F1 | **0.9837** | <!-- MODEL_B_F1 --> |
-| Avg. inference latency | **0.20ms/example** | <!-- MODEL_B_LATENCY --> |
-| Artifact size | **908KB** | <!-- MODEL_B_SIZE --> |
+| Test accuracy | **98.45%** | 97.73% |
+| Test macro F1 | **0.9837** | 0.9761 |
+| Avg. inference latency | **0.20ms/example** | 46.09ms/example |
+| Artifact size | **908KB** | 267.9MB |
 | Deployed live | **Yes** | No (Part A's justified decision) |
 
-<!-- MODEL_B_COMPARISON_DISCUSSION_PLACEHOLDER -->
+**The honest result: Model A wins on every axis this time, not just size and speed.**
+Unlike the pattern this comparison found on other tasks (a Transformer trading size/speed for
+a real accuracy gain), here Model A's 98.45% edges out Model B's 97.73%. This is a fair,
+disclosed consequence of the same resource-constrained retraining documented above — Model B
+saw 6,000 of the ~14,500 available training emails, at a 96-token cap, for 2 epochs, while
+Model A trained on the full split. It would be dishonest to claim this shows Transformers
+are worse at phishing detection in general; it shows what a smaller compute budget, forced by
+real infrastructure limits, actually produces. What it does **not** change is the deployment
+argument: Model A was always going to be deployed — its 908KB/0.20ms footprint against
+Model B's 267.9MB/46ms was never a close call — and this result removes the one thing that
+might have complicated that argument (a large Model B accuracy lead) rather than strengthens
+a foregone conclusion.
 
 ### B4. Error analysis
 
@@ -99,7 +128,18 @@ or billing email). Both error types share a root cause: TF-IDF has no mechanism 
 email's *global coherence* — whether the sender, link structure, and claimed identity
 actually match — it only sees local word co-occurrence.
 
-<!-- MODEL_B_ERROR_COMPARISON_PLACEHOLDER -->
+**Measured, not just predicted**: Model B misclassified 41/1,810 test examples (2.3%) — a
+higher rate than Model A's 1.5%, consistent with its lower overall accuracy under this
+compute-constrained retraining. Reviewing Model B's own sample errors shows the same
+underlying difficulty class as Model A's, not a different one: a spam-style promotional
+email misread as safe, a masonic-lodge newsletter and a corporate congratulations note
+misread as phishing (legitimate but unusual-sounding formal language), and a genuinely
+ambiguous "risk brief" marketing update. These are the same "well-crafted phishing mimicking
+legitimate corporate language, and legitimate emails using unusual phrasing" pattern Model A
+struggles with — Model B's contextual embeddings did not resolve this ambiguity class either,
+at least not under this training budget. The honest takeaway is narrower than "contextual
+embeddings help": on this task, with this much training data, they did not clearly help, and
+claiming otherwise would misrepresent a measured result.
 
 ## Part C — Backend & Frontend Development, Integration
 
