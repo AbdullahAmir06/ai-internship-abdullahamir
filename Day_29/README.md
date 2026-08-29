@@ -78,6 +78,33 @@ FRONTEND_DIR=../frontend-app/dist \
 uvicorn app.main:app --reload
 ```
 
+### Enabling Model B locally (compare both models live)
+
+The deployed service only ever runs Model A -- Model B (267.9MB) is intentionally never
+loaded on the free-tier deployment target (see Part A/D of `FINAL_REPORT.md`). To try Model B
+yourself, side by side with Model A, on your own machine:
+
+```bash
+cd Day_29/backend
+pip install -r requirements.txt -r requirements-local.txt   # adds torch + transformers
+ALLOW_MODEL_B=true \
+MODEL_A_PATH=../model_v2/artifacts/model_a_tfidf_logreg.joblib \
+MODEL_B_PATH=../model_v2/artifacts/model_b_distilbert_final.pt \
+RESULTS_DIR=../model_v2/results \
+FRONTEND_DIR=../frontend-app/dist \
+uvicorn app.main:app --reload
+```
+
+`model_b_distilbert_final.pt` isn't in the repo (gitignored, >100MB) -- reproduce it first
+with `python model_v2/train_transformer.py`. With `ALLOW_MODEL_B=true` and the weights
+present, `/healthz` reports `model_b_available: true`, a "MODEL A / MODEL B" picker appears
+in the frontend's exhibit panel, and `POST /api/v1/predict` accepts `{"text": ..., "model":
+"b"}`. Model B's first request pays a one-time weight-loading cost (a few seconds); every
+request after that runs in tens of milliseconds. Requesting `model: "b"` against the live
+deployment (or any instance without `ALLOW_MODEL_B=true`) returns a clean `422`, not a crash
+-- the deployed image never installs `torch`/`transformers` at all, so its measured
+footprint is unaffected by this feature existing in the codebase.
+
 ### Frontend only (local dev, hot reload)
 
 ```bash
@@ -102,9 +129,12 @@ python train_transformer.py    # Model B -- CPU fine-tuning, expect a long run
 
 | Endpoint | Method | Request | Response |
 |---|---|---|---|
-| `/healthz` | GET | — | `{status, model_loaded, uptime_s}` |
-| `/api/v1/predict` | POST | `{text: str}` (1–5000 chars) | `{label: "safe"\|"phishing", confidence, latency_ms}` |
+| `/healthz` | GET | — | `{status, model_loaded, uptime_s, model_b_available}` |
+| `/api/v1/predict` | POST | `{text: str, model?: "a"\|"b"}` (1–5000 chars; `model` defaults to `"a"`) | `{label: "safe"\|"phishing", confidence, latency_ms, model}` |
 | `/api/v1/models` | GET | — | `{models: [...]}` — both models' real measured metrics |
+
+`model: "b"` returns `422` unless the server was started with `ALLOW_MODEL_B=true` and
+Model B's weights present -- see "Enabling Model B locally" above.
 
 ```bash
 curl -X POST https://day29-phishing-inspector.onrender.com/api/v1/predict \
@@ -120,6 +150,8 @@ curl -X POST https://day29-phishing-inspector.onrender.com/api/v1/predict \
 | `RESULTS_DIR` | `model_v2/results` | Path to both models' saved evaluation JSON |
 | `FRONTEND_DIR` | `frontend-app/dist` | Path to the built static frontend |
 | `PORT` | `8000` | Server port |
+| `ALLOW_MODEL_B` | `false` | Enables Model B locally (never set on the deployed image) |
+| `MODEL_B_PATH` | `model_v2/artifacts/model_b_distilbert_final.pt` | Path to Model B's weights, when enabled |
 
 ## Data & license note
 

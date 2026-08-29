@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { checkHealth } from "../api";
 
-export default function HealthBadge() {
+export default function HealthBadge({ onHealth }) {
   const [state, setState] = useState({ status: "checking" });
 
   useEffect(() => {
@@ -9,7 +9,10 @@ export default function HealthBadge() {
     const run = async () => {
       try {
         const data = await checkHealth();
-        if (alive) setState({ status: "ok", ...data });
+        if (alive) {
+          setState({ status: "ok", ...data });
+          onHealth?.(data);
+        }
       } catch (err) {
         if (alive) setState({ status: "err", message: err.message });
       }
@@ -17,7 +20,7 @@ export default function HealthBadge() {
     run();
     const id = setInterval(run, 15000);
     return () => { alive = false; clearInterval(id); };
-  }, []);
+  }, [onHealth]);
 
   const color = state.status === "ok" ? "var(--cleared)" : state.status === "err" ? "var(--flagged)" : "var(--text-faint)";
 

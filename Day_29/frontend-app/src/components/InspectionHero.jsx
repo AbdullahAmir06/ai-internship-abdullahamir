@@ -14,6 +14,8 @@ export default function InspectionHero() {
   const [phase, setPhase] = useState("idle"); // idle | scanning | done | error
   const [result, setResult] = useState(null);
   const [errMsg, setErrMsg] = useState("");
+  const [modelBAvailable, setModelBAvailable] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("a");
 
   const inspect = async () => {
     if (!text.trim()) return;
@@ -21,10 +23,12 @@ export default function InspectionHero() {
     setResult(null);
     const t0 = performance.now();
     try {
-      const data = await predict(text);
+      const data = await predict(text, selectedModel);
       const elapsed = performance.now() - t0;
       // The sweep is the signature motion -- give it room to read even
-      // when the API itself answers in a few milliseconds.
+      // when the API itself answers in a few milliseconds. Model B's
+      // first call also has to load weights from disk (a few seconds),
+      // which already dwarfs the sweep, so this only matters for Model A.
       const minSweep = 900;
       if (elapsed < minSweep) await new Promise((r) => setTimeout(r, minSweep - elapsed));
       setResult(data);
@@ -42,7 +46,7 @@ export default function InspectionHero() {
       <div className="hero-beam" aria-hidden="true" />
       <div className="hero-inner">
         <div className="hero-top">
-          <HealthBadge />
+          <HealthBadge onHealth={(d) => setModelBAvailable(!!d.model_b_available)} />
         </div>
 
         <h1 className="hero-title">
@@ -59,9 +63,31 @@ export default function InspectionHero() {
           <div className="document-panel">
             <div className="document-header mono">
               <span>EXHIBIT — EMAIL TEXT</span>
-              <button className="sample-btn mono" onClick={() => setText(SAMPLE)}>
-                load sample
-              </button>
+              <div className="header-actions">
+                {modelBAvailable && (
+                  <div className="model-picker" role="radiogroup" aria-label="Model">
+                    <button
+                      className={`model-btn ${selectedModel === "a" ? "model-btn-active" : ""}`}
+                      onClick={() => setSelectedModel("a")}
+                      disabled={phase === "scanning"}
+                      aria-pressed={selectedModel === "a"}
+                    >
+                      MODEL A
+                    </button>
+                    <button
+                      className={`model-btn ${selectedModel === "b" ? "model-btn-active" : ""}`}
+                      onClick={() => setSelectedModel("b")}
+                      disabled={phase === "scanning"}
+                      aria-pressed={selectedModel === "b"}
+                    >
+                      MODEL B
+                    </button>
+                  </div>
+                )}
+                <button className="sample-btn mono" onClick={() => setText(SAMPLE)}>
+                  load sample
+                </button>
+              </div>
             </div>
             <textarea
               className="document-textarea"
@@ -91,7 +117,9 @@ export default function InspectionHero() {
                 disabled={phase === "scanning" || !text.trim()}
               >
                 <Search size={16} strokeWidth={2} />
-                {phase === "scanning" ? "INSPECTING…" : "INSPECT"}
+                {phase === "scanning"
+                  ? (selectedModel === "b" ? "INSPECTING (MODEL B)…" : "INSPECTING…")
+                  : "INSPECT"}
               </button>
 
               <AnimatePresence mode="wait">
@@ -131,6 +159,10 @@ export default function InspectionHero() {
                 <div className="verdict-row mono verdict-latency">
                   <span>LATENCY</span>
                   <span>{result.latency_ms.toFixed(2)}ms</span>
+                </div>
+                <div className="verdict-row mono">
+                  <span>SERVED BY</span>
+                  <span>{result.model === "b" ? "MODEL B (local)" : "MODEL A (live)"}</span>
                 </div>
               </motion.div>
             )}
@@ -196,6 +228,20 @@ export default function InspectionHero() {
           color: #6b5c3c;
           margin-bottom: 0.8rem;
         }
+        .header-actions { display: flex; align-items: center; gap: 0.6rem; }
+        .model-picker {
+          display: inline-flex;
+          border: 1px solid #6b5c3c55;
+          border-radius: 3px;
+          overflow: hidden;
+        }
+        .model-btn {
+          background: none; border: none; color: #6b5c3c;
+          padding: 0.2rem 0.55rem; font-size: 0.66rem; letter-spacing: 0.05em;
+          font-family: var(--font-mono); cursor: pointer;
+        }
+        .model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .model-btn-active { background: #2a2013; color: var(--paper-2); }
         .sample-btn {
           background: none; border: 1px solid #6b5c3c55; color: #6b5c3c;
           padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.68rem;

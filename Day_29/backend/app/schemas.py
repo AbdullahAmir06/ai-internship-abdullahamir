@@ -12,6 +12,9 @@ from app.config import MAX_TEXT_LENGTH
 class PredictRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH,
                        description="Email text to inspect.")
+    model: Literal["a", "b"] = Field("a", description="Which model should serve this "
+                                      "prediction. 'b' is only honored when Model B is "
+                                      "enabled locally (see README) -- otherwise 422.")
 
     @field_validator("text")
     @classmethod
@@ -25,6 +28,7 @@ class PredictResponse(BaseModel):
     label: Literal["safe", "phishing"]
     confidence: float
     latency_ms: float
+    model: Literal["a", "b"]
 
 
 class ModelInfo(BaseModel):
@@ -52,3 +56,4 @@ class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     model_loaded: bool
     uptime_s: float
+    model_b_available: bool = False

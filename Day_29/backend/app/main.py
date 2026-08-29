@@ -93,12 +93,23 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 @app.get("/healthz", response_model=HealthResponse, tags=["monitoring"])
 async def healthz():
     return HealthResponse(status="ok", model_loaded=inference.is_model_a_loaded(),
-                           uptime_s=round(time.time() - START_TIME, 2))
+                           uptime_s=round(time.time() - START_TIME, 2),
+                           model_b_available=inference.is_model_b_available())
 
 
 @app.post("/api/v1/predict", response_model=PredictResponse, tags=["inference"])
 async def predict_endpoint(req: PredictRequest):
-    result = await run_in_threadpool(inference.predict, req.text)
+    if req.model == "b" and not inference.is_model_b_available():
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content=ErrorResponse(
+                error="model_unavailable",
+                detail="Model B is not enabled on this deployment -- run locally with "
+                       "ALLOW_MODEL_B=true and backend/requirements-local.txt installed.",
+                status_code=422,
+            ).model_dump(),
+        )
+    result = await run_in_threadpool(inference.predict, req.text, req.model)
     return PredictResponse(**result)
 
 

@@ -1,0 +1,12 @@
+# Optional, local-only. Install alongside requirements.txt to enable Model B
+# ("model": "b" in /api/v1/predict) for direct side-by-side comparison on
+# your own machine. Never installed by the Dockerfile -- the deployed
+# image's measured footprint (649MB, no torch/transformers) is unaffected
+# regardless of whether this file exists.
+#
+#   pip install -r requirements.txt -r requirements-local.txt
+#   ALLOW_MODEL_B=true uvicorn app.main:app --reload
+#
+# Same versions used to actually train Model B (model_v2/train_transformer.py).
+torch==2.13.0
+transformers==4.57.6

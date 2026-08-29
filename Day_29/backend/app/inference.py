@@ -1,11 +1,11 @@
 """
 Part C -- model loading (singleton, loaded once at import) and prediction
-logic for the deployed model (Model A). Also exposes both models'
-pre-computed evaluation results for the dashboard's comparison view --
-Model B is never loaded here; only its already-saved metrics (from
-model/results/transformer_results.json) are read, so this service's own
-runtime footprint stays exactly Model A's tiny footprint, per Part A's
-deployment decision.
+logic. Model A loads unconditionally (the deployed model -- see Part A's
+justification). Model B loads only when explicitly enabled locally
+(config.ALLOW_MODEL_B); torch/transformers are imported lazily, inside
+get_model_b() itself, so the deployed service's process never even
+attempts to import them -- backend/requirements.txt has neither package,
+and this module still imports cleanly without them installed.
 """
 import json
 import logging
@@ -14,12 +14,15 @@ from threading import Lock
 
 import joblib
 
-from app.config import MODEL_A_PATH, RESULTS_DIR
+from app.config import ALLOW_MODEL_B, MODEL_A_PATH, MODEL_B_MAX_LEN, MODEL_B_PATH, RESULTS_DIR
 
 logger = logging.getLogger("app.inference")
 
 _model_a = None
+_model_b = None
+_model_b_tokenizer = None
 _lock = Lock()
+_lock_b = Lock()
 
 LABEL_NAMES = {0: "safe", 1: "phishing"}
 
@@ -41,13 +44,71 @@ def is_model_a_loaded() -> bool:
     return _model_a is not None
 
 
-def predict(text: str) -> dict:
+def is_model_b_available() -> bool:
+    return ALLOW_MODEL_B and MODEL_B_PATH.exists()
+
+
+def is_model_b_loaded() -> bool:
+    return _model_b is not None
+
+
+def get_model_b():
+    global _model_b, _model_b_tokenizer
+    if _model_b is not None:
+        return _model_b, _model_b_tokenizer
+    with _lock_b:
+        if _model_b is not None:
+            return _model_b, _model_b_tokenizer
+        if not is_model_b_available():
+            raise RuntimeError(
+                "Model B is not available -- set ALLOW_MODEL_B=true and install "
+                "backend/requirements-local.txt (torch, transformers) to enable it locally."
+            )
+        import torch
+        from transformers import DistilBertForSequenceClassification, DistilBertTokenizerFast
+
+        logger.info(f"Loading Model B from {MODEL_B_PATH}")
+        tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
+        model = DistilBertForSequenceClassification.from_pretrained(
+            "distilbert-base-uncased", num_labels=2
+        )
+        model.load_state_dict(torch.load(MODEL_B_PATH, map_location="cpu"))
+        model.eval()
+        _model_b, _model_b_tokenizer = model, tokenizer
+        logger.info("Model B loaded")
+        return _model_b, _model_b_tokenizer
+
+
+def predict(text: str, model_choice: str = "a") -> dict:
+    if model_choice == "b":
+        return _predict_b(text)
+    return _predict_a(text)
+
+
+def _predict_a(text: str) -> dict:
     model = get_model_a()
     t0 = time.time()
     pred = model.predict([text])[0]
     proba = model.predict_proba([text])[0]
     latency_ms = (time.time() - t0) * 1000
-    return dict(label=LABEL_NAMES[int(pred)], confidence=float(proba[int(pred)]), latency_ms=latency_ms)
+    return dict(label=LABEL_NAMES[int(pred)], confidence=float(proba[int(pred)]),
+                latency_ms=latency_ms, model="a")
+
+
+def _predict_b(text: str) -> dict:
+    import torch
+
+    model, tokenizer = get_model_b()
+    t0 = time.time()
+    inputs = tokenizer(text, padding="max_length", truncation=True,
+                        max_length=MODEL_B_MAX_LEN, return_tensors="pt")
+    with torch.no_grad():
+        logits = model(**inputs).logits
+        proba = torch.softmax(logits, dim=1)[0]
+    pred = int(torch.argmax(proba).item())
+    latency_ms = (time.time() - t0) * 1000
+    return dict(label=LABEL_NAMES[pred], confidence=float(proba[pred]),
+                latency_ms=latency_ms, model="b")
 
 
 def get_model_comparison() -> list[dict]:

@@ -1,6 +1,8 @@
 """
 Backend configuration. Model A's serialized artifact path is the only
-model this service loads at runtime -- see Part A's justification.
+model this service loads at runtime by default -- see Part A's
+justification. Model B can be enabled for local-only comparison; see
+ALLOW_MODEL_B below.
 """
 import os
 from pathlib import Path
@@ -18,3 +20,12 @@ RESULTS_DIR = Path(os.getenv("RESULTS_DIR", str(ROOT / "model_v2" / "results")))
 
 MAX_TEXT_LENGTH = 5000
 PORT = int(os.getenv("PORT", "8000"))
+
+# Model B is never enabled by default, and the deployed Dockerfile never
+# sets this env var -- the live service's measured footprint (backend/
+# requirements.txt has no torch/transformers) is unaffected regardless of
+# this flag's value. Set ALLOW_MODEL_B=true only for local comparison,
+# after installing backend/requirements-local.txt.
+ALLOW_MODEL_B = os.getenv("ALLOW_MODEL_B", "false").lower() == "true"
+MODEL_B_PATH = Path(os.getenv("MODEL_B_PATH", str(ROOT / "model_v2" / "artifacts" / "model_b_distilbert_final.pt")))
+MODEL_B_MAX_LEN = 96

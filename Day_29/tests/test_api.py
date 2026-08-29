@@ -65,8 +65,29 @@ def test_predict_safe_email():
 def test_predict_response_schema():
     res = client.post("/api/v1/predict", json={"text": "A routine status update email."})
     body = res.json()
-    assert set(body.keys()) == {"label", "confidence", "latency_ms"}
+    assert set(body.keys()) == {"label", "confidence", "latency_ms", "model"}
     assert body["label"] in ("safe", "phishing")
+
+
+def test_predict_defaults_to_model_a():
+    res = client.post("/api/v1/predict", json={"text": "A routine status update email."})
+    assert res.json()["model"] == "a"
+
+
+def test_predict_model_b_rejected_when_not_enabled():
+    """This test suite runs without ALLOW_MODEL_B set, matching the deployed
+    default -- requesting Model B must fail cleanly (422), never crash or
+    silently fall back to Model A."""
+    res = client.post("/api/v1/predict", json={"text": "test", "model": "b"})
+    assert res.status_code == 422
+    body = res.json()
+    assert body["error"] == "model_unavailable"
+
+
+def test_healthz_reports_model_b_availability():
+    body = client.get("/healthz").json()
+    assert "model_b_available" in body
+    assert body["model_b_available"] is False
 
 
 # ---------------------------------------------------------------- predict: validation errors

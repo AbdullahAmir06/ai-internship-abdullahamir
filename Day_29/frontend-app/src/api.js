@@ -9,11 +9,11 @@ export async function checkHealth() {
   return { ...data, ms };
 }
 
-export async function predict(text) {
+export async function predict(text, model = "a") {
   const res = await fetch(`${BASE}/api/v1/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, model }),
   });
   const data = await res.json();
   if (!res.ok) {
