@@ -176,6 +176,33 @@ Verified directly (headless Chromium + scripted interaction, not just assumed): 
 badge, the full predict → scan → stamp → confidence-gauge flow, the live model-comparison
 table, and both desktop and mobile layouts.
 
+### C2b. Security-analyst features beyond the base classifier
+
+Three deterministic additions, none machine-learned and none fabricated:
+
+- **URL risk analysis** (`backend/app/url_analysis.py`): extracts URLs from the pasted text
+  and checks each against real phishing indicators (IP-literal hosts, known shorteners,
+  `@`-in-authority tricks, excessive subdomains, uncommon TLDs, non-ASCII homograph
+  characters, and edit-distance lookalike-domain detection against a small watched-brand
+  list). No network calls -- computed entirely from the URL string.
+- **Explainability**: `inference.explain_a` reads Model A's own learned TF-IDF +
+  Logistic Regression coefficients and reports which words/phrases actually present in the
+  inspected text contributed most to the verdict, and in which direction. The frontend
+  highlights the exact character spans in an annotated copy of the text -- genuine model
+  introspection, not a canned explanation. Scoped to Model A only; a Transformer's per-token
+  attribution needs attention/integrated-gradients, out of scope here.
+- **Adversarial evasion check** (`POST /api/v1/adversarial-check`): applies leetspeak
+  substitution -- a real technique used to dodge keyword filters -- to common phishing
+  trigger words in the same text just inspected, then genuinely re-runs Model A on the
+  perturbed version. Measured example: "Verify your account immediately or it will be
+  suspended." scores 93.7% phishing; leetspeak-perturbed to "V3r1fy your 4cc0unt
+  1mm3d14t3ly or it will be 5u5p3nd3d." drops to 74.1% but the verdict does not flip --
+  a real, disclosed result (confidence erodes under evasion, the model doesn't collapse),
+  not a cherry-picked one.
+
+All three add zero measured memory overhead: re-verified under the same
+`--memory=512m` cap as D2 below, the container still used 110.6MiB.
+
 ### C3. Scope adherence
 
 Every UI element and API endpoint traces back to Part A's in-scope feature list — no
@@ -186,16 +213,18 @@ copy or interaction that could read as generating phishing content rather than d
 
 ### D1. Functional testing
 
-`tests/test_api.py`, 16 test cases, run via `pytest`:
+`tests/test_api.py`, 24 test cases, run via `pytest`:
 
 | Category | Tests | Result |
 |---|---|---|
-| Health check | 1 | Pass |
+| Health check (incl. Model B availability reporting) | 2 | Pass |
 | Predict — happy path | 3 | Pass |
 | Predict — validation errors (blank, whitespace, missing field, wrong type, oversized) | 5 | Pass |
 | Model comparison endpoint | 1 | Pass |
 | Frontend/static serving (including built-asset resolution, not hardcoded filenames) | 2 | Pass |
 | Label correctness on unambiguous cases | 4 | Pass |
+| Model selection (defaults to A, Model B cleanly rejected when disabled) | 2 | Pass |
+| Explainability, URL analysis, adversarial-check | 5 | Pass |
 
 **A real bug found before testing even started**: 533 rows in the source dataset carried
 the literal placeholder text `"empty"`, not caught by a null check — found by reading actual

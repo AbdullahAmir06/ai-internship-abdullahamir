@@ -24,6 +24,28 @@ document, and `FINAL_REPORT.md` for the complete capstone report (Parts B–E).
 | **Frontend** | React + Vite + Framer Motion, built to static assets, served from the same container |
 | **Deployment** | Docker (multi-stage, Node build stage + Python runtime, non-root, ~650MB image — no torch/transformers at runtime); live at [day29-phishing-inspector.onrender.com](https://day29-phishing-inspector.onrender.com) (Render free tier) |
 
+## Security features beyond the base classifier
+
+Three additions, all deterministic and disclosed as such (no fabricated data):
+
+- **URL risk analysis** (`backend/app/url_analysis.py`) — extracts any URLs in the pasted
+  text and checks each against real, documented phishing indicators: IP-literal hostnames,
+  known shorteners, `@`-in-authority redirect tricks, excessive subdomains, uncommon TLDs,
+  non-ASCII homograph characters, and lookalike/typosquat domains (edit-distance against a
+  small watched-brand list, e.g. `paypa1-secure.xyz` flags as close to `paypal`). No network
+  calls — computed entirely from the URL string.
+- **Explainability** (`inference.explain_a`) — reads Model A's own learned TF-IDF +
+  Logistic Regression weights and reports exactly which words/phrases in *this* email pushed
+  the verdict toward phishing or safe, and by how much. The frontend highlights those exact
+  character spans in an annotated copy of the inspected text — genuine model introspection,
+  not a canned explanation. (Model A only; a Transformer's per-token attribution needs
+  attention/integrated-gradients, out of scope here.)
+- **Adversarial evasion check** (`POST /api/v1/adversarial-check`) — applies leetspeak
+  substitution (a real technique used to dodge keyword filters) to common phishing trigger
+  words in the *same* text just inspected, then genuinely re-runs Model A on the perturbed
+  version. Shows both real verdicts side by side and whether the evasion attempt flipped the
+  model's decision — an honest robustness probe, not a scripted demo.
+
 ## Architecture
 
 ![architecture diagram](model_v2/figures/architecture_diagram.png)
@@ -130,8 +152,9 @@ python train_transformer.py    # Model B -- CPU fine-tuning, expect a long run
 | Endpoint | Method | Request | Response |
 |---|---|---|---|
 | `/healthz` | GET | — | `{status, model_loaded, uptime_s, model_b_available}` |
-| `/api/v1/predict` | POST | `{text: str, model?: "a"\|"b"}` (1–5000 chars; `model` defaults to `"a"`) | `{label: "safe"\|"phishing", confidence, latency_ms, model}` |
+| `/api/v1/predict` | POST | `{text: str, model?: "a"\|"b"}` (1–5000 chars; `model` defaults to `"a"`) | `{label, confidence, latency_ms, model, highlights: [...], url_findings: [...]}` |
 | `/api/v1/models` | GET | — | `{models: [...]}` — both models' real measured metrics |
+| `/api/v1/adversarial-check` | POST | `{text: str}` (1–5000 chars) | `{original_label, original_confidence, perturbed_text, replaced_words, perturbed_label, perturbed_confidence, verdict_flipped}` |
 
 `model: "b"` returns `422` unless the server was started with `ALLOW_MODEL_B=true` and
 Model B's weights present -- see "Enabling Model B locally" above.

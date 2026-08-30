@@ -4,6 +4,9 @@ import { Search } from "lucide-react";
 import { predict } from "../api";
 import ConfidenceGauge from "./ConfidenceGauge";
 import HealthBadge from "./HealthBadge";
+import HighlightedText from "./HighlightedText";
+import UrlFindings from "./UrlFindings";
+import AdversarialCheck from "./AdversarialCheck";
 
 const SAMPLE = "Dear Customer, we detected unusual activity on your account. " +
   "Verify your identity within 24 hours or your access will be suspended. " +
@@ -141,6 +144,16 @@ export default function InspectionHero() {
             {phase === "error" && (
               <p className="error-text mono">INSPECTION FAILED — {errMsg}</p>
             )}
+
+            {phase === "done" && result && (
+              <div className="annotated">
+                <div className="annotated-label mono">ANNOTATED COPY — MODEL'S OWN WEIGHTS</div>
+                <p className="annotated-text">
+                  <HighlightedText text={text} highlights={result.highlights} />
+                </p>
+                <UrlFindings findings={result.url_findings} />
+              </div>
+            )}
           </div>
 
           <AnimatePresence>
@@ -164,6 +177,7 @@ export default function InspectionHero() {
                   <span>SERVED BY</span>
                   <span>{result.model === "b" ? "MODEL B (local)" : "MODEL A (live)"}</span>
                 </div>
+                {result.model === "a" && <AdversarialCheck text={text} />}
               </motion.div>
             )}
           </AnimatePresence>
@@ -302,6 +316,20 @@ export default function InspectionHero() {
 
         .error-text {
           color: var(--flagged); font-size: 0.8rem; margin-top: 0.8rem;
+        }
+
+        .annotated {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid #b8a87855;
+        }
+        .annotated-label {
+          font-size: 0.68rem; letter-spacing: 0.08em; color: #6b5c3c;
+          margin-bottom: 0.6rem;
+        }
+        .annotated-text {
+          font-size: 0.98rem; line-height: 1.6; color: #2a2013;
+          margin: 0;
         }
 
         .verdict-card {

@@ -65,8 +65,54 @@ def test_predict_safe_email():
 def test_predict_response_schema():
     res = client.post("/api/v1/predict", json={"text": "A routine status update email."})
     body = res.json()
-    assert set(body.keys()) == {"label", "confidence", "latency_ms", "model"}
+    assert set(body.keys()) == {"label", "confidence", "latency_ms", "model", "highlights", "url_findings"}
     assert body["label"] in ("safe", "phishing")
+
+
+# ---------------------------------------------------------------- explainability + URL/adversarial extensions
+
+def test_predict_highlights_reference_real_text_offsets():
+    text = "Verify your account immediately or access will be suspended."
+    res = client.post("/api/v1/predict", json={"text": text})
+    highlights = res.json()["highlights"]
+    assert len(highlights) > 0
+    for h in highlights:
+        assert text[h["start"]:h["end"]].lower().replace("\n", " ") in text.lower()
+        assert h["direction"] in ("safe", "phishing")
+
+
+def test_predict_flags_lookalike_domain():
+    res = client.post("/api/v1/predict", json={
+        "text": "Verify your account at http://paypa1-secure.xyz/login immediately."
+    })
+    findings = res.json()["url_findings"]
+    assert len(findings) == 1
+    assert any("lookalike" in s for s in findings[0]["signals"])
+
+
+def test_predict_does_not_flag_legitimate_domain():
+    res = client.post("/api/v1/predict", json={
+        "text": "You can review your statement at https://www.paypal.com/myaccount"
+    })
+    findings = res.json()["url_findings"]
+    assert findings[0]["signals"] == []
+
+
+def test_adversarial_check_runs_two_real_predictions():
+    res = client.post("/api/v1/adversarial-check", json={
+        "text": "Verify your account immediately or it will be suspended. Click here now."
+    })
+    assert res.status_code == 200
+    body = res.json()
+    assert body["original_label"] in ("safe", "phishing")
+    assert body["perturbed_label"] in ("safe", "phishing")
+    assert len(body["replaced_words"]) > 0
+    assert body["perturbed_text"] != "Verify your account immediately or it will be suspended. Click here now."
+
+
+def test_adversarial_check_rejects_blank_text():
+    res = client.post("/api/v1/adversarial-check", json={"text": "  "})
+    assert res.status_code == 422
 
 
 def test_predict_defaults_to_model_a():

@@ -24,11 +24,49 @@ class PredictRequest(BaseModel):
         return v
 
 
+class HighlightSpan(BaseModel):
+    start: int
+    end: int
+    phrase: str
+    direction: Literal["safe", "phishing"]
+    weight: float
+
+
+class UrlFinding(BaseModel):
+    url: str
+    host: Optional[str] = None
+    signals: list[str] = []
+    risk_score: int
+
+
 class PredictResponse(BaseModel):
     label: Literal["safe", "phishing"]
     confidence: float
     latency_ms: float
     model: Literal["a", "b"]
+    highlights: list[HighlightSpan] = []
+    url_findings: list[UrlFinding] = []
+
+
+class AdversarialCheckRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH)
+
+    @field_validator("text")
+    @classmethod
+    def not_blank(cls, v):
+        if not v.strip():
+            raise ValueError("text must not be blank")
+        return v
+
+
+class AdversarialCheckResponse(BaseModel):
+    original_label: Literal["safe", "phishing"]
+    original_confidence: float
+    perturbed_text: str
+    replaced_words: list[str]
+    perturbed_label: Literal["safe", "phishing"]
+    perturbed_confidence: float
+    verdict_flipped: bool
 
 
 class ModelInfo(BaseModel):

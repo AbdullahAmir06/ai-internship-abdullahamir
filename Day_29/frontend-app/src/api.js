@@ -30,3 +30,18 @@ export async function fetchModels() {
   const data = await res.json();
   return data.models;
 }
+
+export async function adversarialCheck(text) {
+  const res = await fetch(`${BASE}/api/v1/adversarial-check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.detail || data.error || `request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}

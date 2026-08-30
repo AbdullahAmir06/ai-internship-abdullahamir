@@ -23,6 +23,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app import inference
 from app.schemas import (
+    AdversarialCheckRequest,
+    AdversarialCheckResponse,
     ErrorResponse,
     HealthResponse,
     ModelComparisonResponse,
@@ -111,6 +113,12 @@ async def predict_endpoint(req: PredictRequest):
         )
     result = await run_in_threadpool(inference.predict, req.text, req.model)
     return PredictResponse(**result)
+
+
+@app.post("/api/v1/adversarial-check", response_model=AdversarialCheckResponse, tags=["inference"])
+async def adversarial_check_endpoint(req: AdversarialCheckRequest):
+    result = await run_in_threadpool(inference.run_adversarial_check, req.text)
+    return AdversarialCheckResponse(**result)
 
 
 @app.get("/api/v1/models", response_model=ModelComparisonResponse, tags=["info"])

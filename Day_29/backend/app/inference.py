@@ -9,11 +9,13 @@ and this module still imports cleanly without them installed.
 """
 import json
 import logging
+import re
 import time
 from threading import Lock
 
 import joblib
 
+from app import url_analysis
 from app.config import ALLOW_MODEL_B, MODEL_A_PATH, MODEL_B_MAX_LEN, MODEL_B_PATH, RESULTS_DIR
 
 logger = logging.getLogger("app.inference")
@@ -80,9 +82,54 @@ def get_model_b():
 
 
 def predict(text: str, model_choice: str = "a") -> dict:
-    if model_choice == "b":
-        return _predict_b(text)
-    return _predict_a(text)
+    result = _predict_b(text) if model_choice == "b" else _predict_a(text)
+    result["url_findings"] = url_analysis.analyze_urls(text)
+    return result
+
+
+def _phrase_spans(text: str, phrase: str) -> list[tuple[int, int]]:
+    words = phrase.split()
+    pattern = r'\b' + r'\W+'.join(re.escape(w) for w in words) + r'\b'
+    return [(m.start(), m.end()) for m in re.finditer(pattern, text, re.IGNORECASE)]
+
+
+def explain_a(text: str, top_k: int = 8) -> list[dict]:
+    """Real model introspection, not a canned explanation: reads Model A's
+    own learned TF-IDF+LogisticRegression weights and reports which n-grams
+    actually present in this text contributed most to the decision, and in
+    which direction. classes_ is [0, 1] (safe, phishing), so a positive
+    coefficient pushes toward phishing, negative toward safe."""
+    model = get_model_a()
+    tfidf = model.named_steps["tfidf"]
+    clf = model.named_steps["clf"]
+    vec = tfidf.transform([text]).tocoo()
+    coef = clf.coef_[0]
+    vocab = tfidf.get_feature_names_out()
+
+    contributions = sorted(
+        ((vocab[idx], float(value) * float(coef[idx])) for idx, value in zip(vec.col, vec.data)),
+        key=lambda pair: abs(pair[1]),
+        reverse=True,
+    )
+
+    highlights, used_spans = [], []
+    for phrase, contribution in contributions:
+        if len(highlights) >= top_k:
+            break
+        spans = _phrase_spans(text, phrase)
+        for start, end in spans:
+            if any(not (end <= s or start >= e) for s, e in used_spans):
+                continue
+            used_spans.append((start, end))
+            highlights.append(dict(
+                start=start, end=end, phrase=phrase,
+                direction="phishing" if contribution > 0 else "safe",
+                weight=round(abs(contribution), 4),
+            ))
+            break
+
+    highlights.sort(key=lambda h: h["start"])
+    return highlights
 
 
 def _predict_a(text: str) -> dict:
@@ -91,8 +138,9 @@ def _predict_a(text: str) -> dict:
     pred = model.predict([text])[0]
     proba = model.predict_proba([text])[0]
     latency_ms = (time.time() - t0) * 1000
+    highlights = explain_a(text)
     return dict(label=LABEL_NAMES[int(pred)], confidence=float(proba[int(pred)]),
-                latency_ms=latency_ms, model="a")
+                latency_ms=latency_ms, model="a", highlights=highlights)
 
 
 def _predict_b(text: str) -> dict:
@@ -107,8 +155,29 @@ def _predict_b(text: str) -> dict:
         proba = torch.softmax(logits, dim=1)[0]
     pred = int(torch.argmax(proba).item())
     latency_ms = (time.time() - t0) * 1000
+    # Explainability is only implemented for Model A's linear weights (see
+    # explain_a) -- a Transformer's contribution per token needs attention
+    # or integrated-gradients attribution, out of scope here.
     return dict(label=LABEL_NAMES[pred], confidence=float(proba[pred]),
-                latency_ms=latency_ms, model="b")
+                latency_ms=latency_ms, model="b", highlights=[])
+
+
+def run_adversarial_check(text: str) -> dict:
+    """Applies a real evasion technique (leetspeak on common trigger words)
+    to the user's own text, then genuinely re-runs Model A on both versions
+    -- two real model calls, never a fabricated comparison."""
+    from app import adversarial
+
+    original = _predict_a(text)
+    perturbation = adversarial.perturb(text)
+    perturbed = _predict_a(perturbation["perturbed_text"])
+    return dict(
+        original_label=original["label"], original_confidence=original["confidence"],
+        perturbed_text=perturbation["perturbed_text"],
+        replaced_words=perturbation["replaced_words"],
+        perturbed_label=perturbed["label"], perturbed_confidence=perturbed["confidence"],
+        verdict_flipped=original["label"] != perturbed["label"],
+    )
 
 
 def get_model_comparison() -> list[dict]:
