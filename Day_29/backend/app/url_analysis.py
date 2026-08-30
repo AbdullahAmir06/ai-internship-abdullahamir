@@ -12,6 +12,18 @@ from urllib.parse import urlparse
 
 URL_RE = re.compile(r'https?://[^\s<>"\']+', re.IGNORECASE)
 
+# SMS/smishing links are routinely written without a scheme at all (space
+# constraints, and it still renders as a tappable link on most phones) --
+# e.g. "bit.ly/xyz123" or "paypa1-secure.xyz/login". This catches a bare
+# domain(+path), requiring a real-looking multi-char alphabetic TLD so it
+# doesn't fire on version numbers ("v2.5") or sentence-ending initials
+# ("e.g."). Genuinely a heuristic, not a public-suffix-list-grade parser --
+# an occasional false positive on an unusual two-word phrase is the
+# accepted cost of not missing the scheme-less links that dominate SMS.
+BARE_DOMAIN_RE = re.compile(
+    r'\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}(?:/[^\s<>"\']*)?\b'
+)
+
 IP_HOST_RE = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
 
 SHORTENERS = {
@@ -123,12 +135,26 @@ def analyze_url(url: str) -> dict:
 
 
 def analyze_urls(text: str) -> list[dict]:
-    urls = URL_RE.findall(text)
-    # de-duplicate while preserving order
+    scheme_urls = URL_RE.findall(text)
+    covered_spans = [m.span() for m in URL_RE.finditer(text)]
+
+    bare_urls = []
+    for m in BARE_DOMAIN_RE.finditer(text):
+        if any(s <= m.start() < e for s, e in covered_spans):
+            continue  # already matched as part of a full https?:// URL
+        bare_urls.append(m.group(0))
+
+    # de-duplicate while preserving order; bare matches are parsed with an
+    # assumed scheme (analyze_url needs one to extract a hostname) but
+    # reported back using the original, as-typed text.
     seen = set()
-    unique = []
-    for u in urls:
+    findings = []
+    for u in scheme_urls:
         if u not in seen:
             seen.add(u)
-            unique.append(u)
-    return [analyze_url(u) for u in unique]
+            findings.append(analyze_url(u))
+    for u in bare_urls:
+        if u not in seen:
+            seen.add(u)
+            findings.append(analyze_url(f"http://{u}") | {"url": u})
+    return findings

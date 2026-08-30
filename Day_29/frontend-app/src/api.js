@@ -9,11 +9,11 @@ export async function checkHealth() {
   return { ...data, ms };
 }
 
-export async function predict(text, model = "a") {
+export async function predict(text, model = "a", channel = "email") {
   const res = await fetch(`${BASE}/api/v1/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, model }),
+    body: JSON.stringify({ text, model, channel }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -31,11 +31,18 @@ export async function fetchModels() {
   return data.models;
 }
 
-export async function adversarialCheck(text) {
+export async function fetchChannels() {
+  const res = await fetch(`${BASE}/api/v1/channels`);
+  if (!res.ok) throw new Error(`status ${res.status}`);
+  const data = await res.json();
+  return data.channels;
+}
+
+export async function adversarialCheck(text, channel = "email") {
   const res = await fetch(`${BASE}/api/v1/adversarial-check`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, channel }),
   });
   const data = await res.json();
   if (!res.ok) {

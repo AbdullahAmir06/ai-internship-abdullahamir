@@ -8,11 +8,20 @@ import HighlightedText from "./HighlightedText";
 import UrlFindings from "./UrlFindings";
 import AdversarialCheck from "./AdversarialCheck";
 
-const SAMPLE = "Dear Customer, we detected unusual activity on your account. " +
-  "Verify your identity within 24 hours or your access will be suspended. " +
-  "Click here to confirm your details immediately.";
+const SAMPLES = {
+  email: "Dear Customer, we detected unusual activity on your account. " +
+    "Verify your identity within 24 hours or your access will be suspended. " +
+    "Click here to confirm your details immediately.",
+  sms: "URGENT: Your bank account has been locked. Verify now: bit.ly/xyz123",
+};
+
+const CHANNEL_COPY = {
+  email: { noun: "email", exhibit: "EMAIL TEXT", placeholder: "Paste the email body here…" },
+  sms: { noun: "text message", exhibit: "SMS TEXT", placeholder: "Paste the SMS text here…" },
+};
 
 export default function InspectionHero() {
+  const [channel, setChannel] = useState("email");
   const [text, setText] = useState("");
   const [phase, setPhase] = useState("idle"); // idle | scanning | done | error
   const [result, setResult] = useState(null);
@@ -20,13 +29,22 @@ export default function InspectionHero() {
   const [modelBAvailable, setModelBAvailable] = useState(false);
   const [selectedModel, setSelectedModel] = useState("a");
 
+  const switchChannel = (next) => {
+    if (next === channel || phase === "scanning") return;
+    setChannel(next);
+    setText("");
+    setResult(null);
+    setPhase("idle");
+    if (next === "sms") setSelectedModel("a"); // Model B is email-only
+  };
+
   const inspect = async () => {
     if (!text.trim()) return;
     setPhase("scanning");
     setResult(null);
     const t0 = performance.now();
     try {
-      const data = await predict(text, selectedModel);
+      const data = await predict(text, selectedModel, channel);
       const elapsed = performance.now() - t0;
       // The sweep is the signature motion -- give it room to read even
       // when the API itself answers in a few milliseconds. Model B's
@@ -53,21 +71,37 @@ export default function InspectionHero() {
         </div>
 
         <h1 className="hero-title">
-          Every email <span className="hero-title-accent">tells on itself</span>
+          Every {CHANNEL_COPY[channel].noun} <span className="hero-title-accent">tells on itself</span>
           <br />under the right light.
         </h1>
         <p className="hero-sub measure">
-          This is case intake for suspicious email. Paste the text below and a trained
-          model inspects it, then returns an evidence-backed verdict — safe or phishing —
-          with a real, measured confidence score. No account, no upload, nothing stored.
+          This is case intake for a suspicious {CHANNEL_COPY[channel].noun}. Paste the text
+          below and a trained model inspects it, then returns an evidence-backed verdict —
+          safe or phishing — with a real, measured confidence score. No account, no upload,
+          nothing stored.
         </p>
+
+        <div className="channel-tabs" role="tablist" aria-label="Channel">
+          <button
+            role="tab" aria-selected={channel === "email"} className="channel-tab mono"
+            onClick={() => switchChannel("email")}
+          >
+            EMAIL
+          </button>
+          <button
+            role="tab" aria-selected={channel === "sms"} className="channel-tab mono"
+            onClick={() => switchChannel("sms")}
+          >
+            SMS
+          </button>
+        </div>
 
         <div className="desk">
           <div className="document-panel">
             <div className="document-header mono">
-              <span>EXHIBIT — EMAIL TEXT</span>
+              <span>EXHIBIT — {CHANNEL_COPY[channel].exhibit}</span>
               <div className="header-actions">
-                {modelBAvailable && (
+                {channel === "email" && modelBAvailable && (
                   <div className="model-picker" role="radiogroup" aria-label="Model">
                     <button
                       className={`model-btn ${selectedModel === "a" ? "model-btn-active" : ""}`}
@@ -87,14 +121,14 @@ export default function InspectionHero() {
                     </button>
                   </div>
                 )}
-                <button className="sample-btn mono" onClick={() => setText(SAMPLE)}>
+                <button className="sample-btn mono" onClick={() => setText(SAMPLES[channel])}>
                   load sample
                 </button>
               </div>
             </div>
             <textarea
               className="document-textarea"
-              placeholder="Paste the email body here…"
+              placeholder={CHANNEL_COPY[channel].placeholder}
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={6}
@@ -175,9 +209,11 @@ export default function InspectionHero() {
                 </div>
                 <div className="verdict-row mono">
                   <span>SERVED BY</span>
-                  <span>{result.model === "b" ? "MODEL B (local)" : "MODEL A (live)"}</span>
+                  <span>
+                    {result.model === "b" ? "MODEL B (local)" : `MODEL A (${result.channel}, live)`}
+                  </span>
                 </div>
-                {result.model === "a" && <AdversarialCheck text={text} />}
+                {result.model === "a" && <AdversarialCheck text={text} channel={channel} />}
               </motion.div>
             )}
           </AnimatePresence>
@@ -220,8 +256,29 @@ export default function InspectionHero() {
           color: var(--text-dim);
         }
 
+        .channel-tabs {
+          display: inline-flex;
+          margin-top: 2rem;
+          border: 1px solid var(--panel-border);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .channel-tab {
+          background: var(--panel);
+          border: none;
+          color: var(--text-dim);
+          padding: 0.55rem 1.4rem;
+          font-size: 0.78rem;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .channel-tab + .channel-tab { border-left: 1px solid var(--panel-border); }
+        .channel-tab[aria-selected="true"] { background: var(--lamp); color: #241a08; }
+        .channel-tab:not([aria-selected="true"]):hover { color: var(--lamp-bright); }
+
         .desk {
-          margin-top: 3rem;
+          margin-top: 2rem;
           display: grid;
           grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
           gap: 1.5rem;

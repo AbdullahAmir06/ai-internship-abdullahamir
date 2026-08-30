@@ -18,6 +18,11 @@ ROOT = Path(__file__).parent.parent.parent
 MODEL_A_PATH = Path(os.getenv("MODEL_A_PATH", str(ROOT / "model_v2" / "artifacts" / "model_a_tfidf_logreg.joblib")))
 RESULTS_DIR = Path(os.getenv("RESULTS_DIR", str(ROOT / "model_v2" / "results")))
 
+# SMS channel -- same tiny TF-IDF+LogReg architecture as the email channel's
+# Model A (128.7KB), deployed unconditionally like Model A: no memory-budget
+# concern the way Model B has.
+MODEL_SMS_PATH = Path(os.getenv("MODEL_SMS_PATH", str(ROOT / "model_v2" / "artifacts" / "model_sms_tfidf_logreg.joblib")))
+
 MAX_TEXT_LENGTH = 5000
 PORT = int(os.getenv("PORT", "8000"))
 

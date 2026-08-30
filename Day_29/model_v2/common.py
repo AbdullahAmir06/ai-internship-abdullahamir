@@ -39,10 +39,7 @@ def _clean(texts, labels):
     return out_texts, out_labels
 
 
-def get_splits():
-    ds = load_dataset("zefang-liu/phishing-email-dataset")["train"]
-    texts, labels = _clean(list(ds["Email Text"]), list(ds["Email Type"]))
-
+def _split(texts, labels):
     train_texts, temp_texts, train_labels, temp_labels = train_test_split(
         texts, labels, test_size=0.2, stratify=labels, random_state=RANDOM_SEED
     )
@@ -54,3 +51,27 @@ def get_splits():
         val_texts, val_labels,
         test_texts, test_labels,
     )
+
+
+def get_splits():
+    """Email channel."""
+    ds = load_dataset("zefang-liu/phishing-email-dataset")["train"]
+    texts, labels = _clean(list(ds["Email Text"]), list(ds["Email Type"]))
+    return _split(texts, labels)
+
+
+def get_sms_splits():
+    """SMS channel -- the classic UCI SMS Spam Collection (5,574 messages,
+    ham/spam, ~87/13 imbalance -- more severe than the email channel's
+    ~61/39, handled the same way: class_weight="balanced" at training time,
+    not resampling). Ships only a single 'train' split, same as the email
+    dataset, so the same stratified 80/10/10 split is used."""
+    ds = load_dataset("sms_spam")["train"]
+    texts, labels = [], []
+    for t, lab in zip(ds["sms"], ds["label"]):
+        t = t.strip()
+        if not t:
+            continue
+        texts.append(t)
+        labels.append(int(lab))  # ClassLabel: 0=ham, 1=spam -- already 0=safe/1=phishing-shaped
+    return _split(texts, labels)

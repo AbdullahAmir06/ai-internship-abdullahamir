@@ -25,6 +25,8 @@ from app import inference
 from app.schemas import (
     AdversarialCheckRequest,
     AdversarialCheckResponse,
+    ChannelInfo,
+    ChannelsResponse,
     ErrorResponse,
     HealthResponse,
     ModelComparisonResponse,
@@ -43,16 +45,18 @@ START_TIME = time.time()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await run_in_threadpool(inference.get_model_a)
-    logger.info("Model A loaded at startup")
+    logger.info("Model A (email) loaded at startup")
+    await run_in_threadpool(inference.get_model_sms)
+    logger.info("SMS channel model loaded at startup")
     yield
 
 
 app = FastAPI(
-    title="Phishing Email Inspection Desk API",
-    description="Capstone project -- serves Model A (TF-IDF + Logistic Regression) "
-                "for live phishing/safe email classification, and exposes both "
-                "models' evaluation results for comparison.",
-    version="2.0.0",
+    title="Phishing Inspection Desk API",
+    description="Capstone project -- multi-channel phishing/safe classification "
+                "(email and SMS), serving Model A (TF-IDF + Logistic Regression) live "
+                "for both channels, and exposing evaluation results for comparison.",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -101,6 +105,16 @@ async def healthz():
 
 @app.post("/api/v1/predict", response_model=PredictResponse, tags=["inference"])
 async def predict_endpoint(req: PredictRequest):
+    if req.model == "b" and req.channel == "sms":
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content=ErrorResponse(
+                error="model_unavailable",
+                detail="Model B (fine-tuned DistilBERT) was only trained for the email "
+                       "channel -- use model='a' for SMS.",
+                status_code=422,
+            ).model_dump(),
+        )
     if req.model == "b" and not inference.is_model_b_available():
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -111,13 +125,13 @@ async def predict_endpoint(req: PredictRequest):
                 status_code=422,
             ).model_dump(),
         )
-    result = await run_in_threadpool(inference.predict, req.text, req.model)
+    result = await run_in_threadpool(inference.predict, req.text, req.model, req.channel)
     return PredictResponse(**result)
 
 
 @app.post("/api/v1/adversarial-check", response_model=AdversarialCheckResponse, tags=["inference"])
 async def adversarial_check_endpoint(req: AdversarialCheckRequest):
-    result = await run_in_threadpool(inference.run_adversarial_check, req.text)
+    result = await run_in_threadpool(inference.run_adversarial_check, req.text, req.channel)
     return AdversarialCheckResponse(**result)
 
 
@@ -125,6 +139,12 @@ async def adversarial_check_endpoint(req: AdversarialCheckRequest):
 async def models_endpoint():
     models = await run_in_threadpool(inference.get_model_comparison)
     return ModelComparisonResponse(models=[ModelInfo(**m) for m in models])
+
+
+@app.get("/api/v1/channels", response_model=ChannelsResponse, tags=["info"])
+async def channels_endpoint():
+    channels = await run_in_threadpool(inference.get_channels)
+    return ChannelsResponse(channels=[ChannelInfo(**c) for c in channels])
 
 
 # Same relative-depth caveat as app/config.py's ROOT -- env-overridable so

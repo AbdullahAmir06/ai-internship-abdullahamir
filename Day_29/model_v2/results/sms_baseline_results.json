@@ -1,0 +1,119 @@
+{
+  "preprocessing_notes": "Data cleaning / preprocessing decisions -- SMS channel\n------------------------------------------------------------------------\n- Source: the classic UCI SMS Spam Collection (5,574 messages), via HF\n  `datasets` (\"sms_spam\"). Verified directly: no missing/empty messages\n  after stripping whitespace.\n- Class imbalance: severe -- 4,827 ham vs. 747 spam (~87/13), notably more\n  skewed than the email channel's ~61/39. Handled the same way as the\n  email channel for consistency: class_weight=\"balanced\" at training time\n  plus macro-averaged metrics, not resampling.\n- Text length: short and uniform (SMS length limits keep messages under\n  ~160 characters) -- no truncation cap needed, unlike the email channel's\n  20,000-character cap for its long-tail outliers.\n- No further normalization applied, for the same reason as the email\n  channel: case/punctuation carry real signal (ALL-CAPS urgency, \"FREE\",\n  excessive \"!!!\") that lowercasing would destroy.\n- Split: dataset ships only a single 'train' split; an 80/10/10 stratified\n  split was created directly (fixed seed), mirroring the email channel.\n- Scope decision: only Model A's architecture (TF-IDF + LogReg) is trained\n  for this channel. Model B's fine-tuned DistilBERT comparison is\n  deliberately not repeated here -- the Task 27 static-vs-contextual\n  comparison is already made once, on the email channel; repeating a\n  multi-hour Transformer fine-tune for a second channel would add training\n  time without adding a new comparison finding, per this project's own\n  precedent of treating compute budget as a real, respected constraint.",
+  "hyperparameter_search": [
+    {
+      "config": {
+        "max_features": 3000,
+        "ngram_max": 1,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9838420107719928,
+      "val_f1": 0.9647341873667772
+    },
+    {
+      "config": {
+        "max_features": 5000,
+        "ngram_max": 1,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9838420107719928,
+      "val_f1": 0.9651354452828876
+    },
+    {
+      "config": {
+        "max_features": 5000,
+        "ngram_max": 2,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9802513464991023,
+      "val_f1": 0.9573877664568626
+    },
+    {
+      "config": {
+        "max_features": 5000,
+        "ngram_max": 2,
+        "C": 0.5
+      },
+      "val_accuracy": 0.9802513464991023,
+      "val_f1": 0.9573877664568626
+    },
+    {
+      "config": {
+        "max_features": 5000,
+        "ngram_max": 2,
+        "C": 2.0
+      },
+      "val_accuracy": 0.9820466786355476,
+      "val_f1": 0.9605881354013359
+    },
+    {
+      "config": {
+        "max_features": 8000,
+        "ngram_max": 2,
+        "C": 1.0
+      },
+      "val_accuracy": 0.9820466786355476,
+      "val_f1": 0.9610402327793632
+    }
+  ],
+  "best_config": {
+    "max_features": 3000,
+    "ngram_max": 1,
+    "C": 1.0
+  },
+  "val_accuracy": 0.9838420107719928,
+  "test_accuracy": 0.9874551971326165,
+  "test_macro_precision": 0.975597498324771,
+  "test_macro_recall": 0.9702277432712215,
+  "test_macro_f1": 0.9728906255422222,
+  "avg_latency_ms": 0.007573421710708236,
+  "confusion_matrix": [
+    [
+      480,
+      3
+    ],
+    [
+      4,
+      71
+    ]
+  ],
+  "n_errors": 7,
+  "sample_errors": [
+    {
+      "text": "Have you been practising your curtsey?",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "Can u get pic msgs to your phone?",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "Sorry I missed your call let's talk when you have the time. I'm on 07090201529",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "For sale - arsenal dartboard. Good condition but no doubles or trebles!",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "Alright i have a new goal now",
+      "true": 0,
+      "pred": 1
+    },
+    {
+      "text": "FreeMsg Hey there darling it's been 3 week's now and no word back! I'd like some fun you up for it still? Tb ok! XxX std chgs to send, \u00a31.50 to rcv",
+      "true": 1,
+      "pred": 0
+    },
+    {
+      "text": "ROMCAPspam Everyone around should be responding well to your presence since you are so warm and outgoing. You are bringing in a real breath of sunshine.",
+      "true": 1,
+      "pred": 0
+    }
+  ],
+  "artifact_size_kb": 128.67578125
+}

@@ -65,8 +65,62 @@ def test_predict_safe_email():
 def test_predict_response_schema():
     res = client.post("/api/v1/predict", json={"text": "A routine status update email."})
     body = res.json()
-    assert set(body.keys()) == {"label", "confidence", "latency_ms", "model", "highlights", "url_findings"}
+    assert set(body.keys()) == {"label", "confidence", "latency_ms", "model", "channel", "highlights", "url_findings"}
     assert body["label"] in ("safe", "phishing")
+
+
+# ---------------------------------------------------------------- multi-channel (email / sms)
+
+def test_predict_defaults_to_email_channel():
+    res = client.post("/api/v1/predict", json={"text": "A routine status update email."})
+    assert res.json()["channel"] == "email"
+
+
+def test_predict_sms_channel_flags_smishing():
+    res = client.post("/api/v1/predict", json={
+        "text": "URGENT: Your bank account has been locked. Verify now: bit.ly/xyz123",
+        "channel": "sms",
+    })
+    assert res.status_code == 200
+    body = res.json()
+    assert body["label"] == "phishing"
+    assert body["channel"] == "sms"
+    assert body["model"] == "a"
+
+
+def test_predict_sms_channel_clears_routine_text():
+    res = client.post("/api/v1/predict", json={
+        "text": "Hey, running 10 mins late, see you soon!",
+        "channel": "sms",
+    })
+    assert res.json()["label"] == "safe"
+
+
+def test_predict_model_b_rejected_for_sms_channel():
+    """Model B was only fine-tuned for email -- requesting it for SMS must
+    fail cleanly (422) even if Model B were enabled, never silently fall
+    back to a different model."""
+    res = client.post("/api/v1/predict", json={"text": "test", "channel": "sms", "model": "b"})
+    assert res.status_code == 422
+    assert res.json()["error"] == "model_unavailable"
+
+
+def test_predict_finds_bare_scheme_less_url():
+    """SMS phishing links are routinely written without http:// at all."""
+    res = client.post("/api/v1/predict", json={
+        "text": "Verify now: bit.ly/xyz123", "channel": "sms",
+    })
+    findings = res.json()["url_findings"]
+    assert len(findings) == 1
+    assert findings[0]["url"] == "bit.ly/xyz123"
+    assert "known-url-shortener" in findings[0]["signals"]
+
+
+def test_channels_endpoint_reports_both_channels():
+    res = client.get("/api/v1/channels")
+    assert res.status_code == 200
+    ids = {c["id"] for c in res.json()["channels"]}
+    assert ids == {"email", "sms"}
 
 
 # ---------------------------------------------------------------- explainability + URL/adversarial extensions

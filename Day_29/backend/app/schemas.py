@@ -11,10 +11,13 @@ from app.config import MAX_TEXT_LENGTH
 
 class PredictRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH,
-                       description="Email text to inspect.")
+                       description="Message text to inspect (email or SMS, per `channel`).")
     model: Literal["a", "b"] = Field("a", description="Which model should serve this "
                                       "prediction. 'b' is only honored when Model B is "
-                                      "enabled locally (see README) -- otherwise 422.")
+                                      "enabled locally (see README) -- otherwise 422. 'b' is "
+                                      "also only valid for the email channel.")
+    channel: Literal["email", "sms"] = Field("email", description="Which channel-specific "
+                                              "model should classify this text.")
 
     @field_validator("text")
     @classmethod
@@ -44,12 +47,14 @@ class PredictResponse(BaseModel):
     confidence: float
     latency_ms: float
     model: Literal["a", "b"]
+    channel: Literal["email", "sms"]
     highlights: list[HighlightSpan] = []
     url_findings: list[UrlFinding] = []
 
 
 class AdversarialCheckRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH)
+    channel: Literal["email", "sms"] = "email"
 
     @field_validator("text")
     @classmethod
@@ -82,6 +87,19 @@ class ModelInfo(BaseModel):
 
 class ModelComparisonResponse(BaseModel):
     models: list[ModelInfo]
+
+
+class ChannelInfo(BaseModel):
+    id: Literal["email", "sms"]
+    label: str
+    available: bool
+    test_accuracy: Optional[float] = None
+    test_macro_f1: Optional[float] = None
+    artifact_size: Optional[str] = None
+
+
+class ChannelsResponse(BaseModel):
+    channels: list[ChannelInfo]
 
 
 class ErrorResponse(BaseModel):

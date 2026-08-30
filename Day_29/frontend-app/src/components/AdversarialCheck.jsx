@@ -6,7 +6,7 @@ import { adversarialCheck } from "../api";
 // A real evasion-resistance probe: applies leetspeak to the SAME text just
 // inspected and genuinely re-runs Model A on it (backend/app/adversarial.py)
 // -- both verdicts shown here are real model calls, not a scripted demo.
-export default function AdversarialCheck({ text }) {
+export default function AdversarialCheck({ text, channel = "email" }) {
   const [state, setState] = useState("idle"); // idle | checking | done | error
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
@@ -14,7 +14,7 @@ export default function AdversarialCheck({ text }) {
   const run = async () => {
     setState("checking");
     try {
-      const data = await adversarialCheck(text);
+      const data = await adversarialCheck(text, channel);
       setResult(data);
       setState("done");
     } catch (e) {

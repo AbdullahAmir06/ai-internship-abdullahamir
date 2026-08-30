@@ -3,11 +3,11 @@
 **PKCERT AI & Software Development Internship — Final Capstone Task**
 Author: Abdullah Amir
 
-A web tool that classifies pasted email text as phishing or safe, live, via a trained model
-served through a REST API. Built to demonstrably integrate skills across the internship:
-Task 27's static-vs-contextual-embeddings comparison *is* this project's actual
-model-selection decision (not a side note), and the deployment approach directly applies an
-earlier project's measured lesson about free-tier memory limits.
+A web tool that classifies pasted email **or SMS** text as phishing/smishing or safe, live,
+via trained models served through a REST API. Built to demonstrably integrate skills across
+the internship: Task 27's static-vs-contextual-embeddings comparison *is* this project's
+actual model-selection decision (not a side note), and the deployment approach directly
+applies an earlier project's measured lesson about free-tier memory limits.
 
 **Full write-up**: see `docs/part_a_scope_and_planning.md` for the scoping/planning
 document, and `FINAL_REPORT.md` for the complete capstone report (Parts B–E).
@@ -16,11 +16,12 @@ document, and `FINAL_REPORT.md` for the complete capstone report (Parts B–E).
 
 | | |
 |---|---|
-| **Problem** | Quick, free, no-signup phishing/safe classification for pasted email text |
-| **Data** | [`zefang-liu/phishing-email-dataset`](https://huggingface.co/datasets/zefang-liu/phishing-email-dataset) (HF `datasets`), 18,650 emails, 80/10/10 split |
-| **Model A (deployed)** | TF-IDF (unigrams+bigrams) + Logistic Regression — see `FINAL_REPORT.md` for its measured test accuracy |
-| **Model B (trained, compared)** | Fine-tuned DistilBERT — contextual-embeddings comparison, see `FINAL_REPORT.md` for its measured results |
-| **Backend** | FastAPI, async, Pydantic-validated, serves Model A only |
+| **Problem** | Quick, free, no-signup phishing/safe classification for pasted email or SMS text |
+| **Channels** | Email (18,650 messages) and SMS (5,574 messages, the classic UCI SMS Spam Collection) — both live, both deployed |
+| **Data** | [`zefang-liu/phishing-email-dataset`](https://huggingface.co/datasets/zefang-liu/phishing-email-dataset) + [`sms_spam`](https://huggingface.co/datasets/sms_spam) (HF `datasets`), 80/10/10 splits |
+| **Model A (deployed, both channels)** | TF-IDF (unigrams+bigrams) + Logistic Regression — see `FINAL_REPORT.md` for measured test accuracy per channel |
+| **Model B (trained, compared, email only)** | Fine-tuned DistilBERT — contextual-embeddings comparison, see `FINAL_REPORT.md` for its measured results |
+| **Backend** | FastAPI, async, Pydantic-validated, serves Model A for both channels |
 | **Frontend** | React + Vite + Framer Motion, built to static assets, served from the same container |
 | **Deployment** | Docker (multi-stage, Node build stage + Python runtime, non-root, ~650MB image — no torch/transformers at runtime); live at [day29-phishing-inspector.onrender.com](https://day29-phishing-inspector.onrender.com) (Render free tier) |
 
@@ -45,6 +46,23 @@ Three additions, all deterministic and disclosed as such (no fabricated data):
   words in the *same* text just inspected, then genuinely re-runs Model A on the perturbed
   version. Shows both real verdicts side by side and whether the evasion attempt flipped the
   model's decision — an honest robustness probe, not a scripted demo.
+
+## Multi-channel detection
+
+A second, independently-trained model (`model_v2/train_sms_baseline.py`) covers SMS/smishing
+text — the classic UCI SMS Spam Collection (5,574 messages), same TF-IDF + Logistic
+Regression architecture as the email channel's Model A, fit on different data. Real,
+measured results: **98.75% test accuracy, 0.9729 macro F1, 128.7KB artifact** — small enough
+to deploy unconditionally alongside the email model, no memory trade-off the way Model B has.
+A channel tab in the UI (`GET /api/v1/channels` for programmatic access) switches which
+model serves the request; Model B (the fine-tuned Transformer) remains email-only by design
+— repeating a multi-hour fine-tune for a second channel would cost real training time without
+producing a new comparison finding, since the Task 27 static-vs-contextual result is already
+established on the email channel.
+
+URL detection was extended for this: SMS phishing links are routinely written without a
+`http://` scheme at all (`bit.ly/xyz123`) since they still render as tappable on a phone —
+`url_analysis.py` now catches bare domain+path patterns too, not just fully-qualified URLs.
 
 ## Architecture
 
@@ -143,8 +161,9 @@ npm run dev
 cd Day_29/model_v2
 python -m venv venv && source venv/bin/activate
 pip install -r ../model_v2/requirements.txt   # or see requirements.txt in model_v2/
-python train_baseline.py       # Model A -- a few seconds
-python train_transformer.py    # Model B -- CPU fine-tuning, expect a long run
+python train_baseline.py       # Model A (email) -- a few seconds
+python train_sms_baseline.py   # Model A (SMS) -- a few seconds
+python train_transformer.py    # Model B (email only) -- CPU fine-tuning, expect a long run
 ```
 
 ## API contract
@@ -152,9 +171,12 @@ python train_transformer.py    # Model B -- CPU fine-tuning, expect a long run
 | Endpoint | Method | Request | Response |
 |---|---|---|---|
 | `/healthz` | GET | — | `{status, model_loaded, uptime_s, model_b_available}` |
-| `/api/v1/predict` | POST | `{text: str, model?: "a"\|"b"}` (1–5000 chars; `model` defaults to `"a"`) | `{label, confidence, latency_ms, model, highlights: [...], url_findings: [...]}` |
-| `/api/v1/models` | GET | — | `{models: [...]}` — both models' real measured metrics |
-| `/api/v1/adversarial-check` | POST | `{text: str}` (1–5000 chars) | `{original_label, original_confidence, perturbed_text, replaced_words, perturbed_label, perturbed_confidence, verdict_flipped}` |
+| `/api/v1/predict` | POST | `{text: str, model?: "a"\|"b", channel?: "email"\|"sms"}` (1–5000 chars; both default to `"a"`/`"email"`) | `{label, confidence, latency_ms, model, channel, highlights: [...], url_findings: [...]}` |
+| `/api/v1/models` | GET | — | `{models: [...]}` — the email channel's Model A/B comparison, real measured metrics |
+| `/api/v1/channels` | GET | — | `{channels: [...]}` — which channels are live and each one's real accuracy |
+| `/api/v1/adversarial-check` | POST | `{text: str, channel?: "email"\|"sms"}` (1–5000 chars) | `{original_label, original_confidence, perturbed_text, replaced_words, perturbed_label, perturbed_confidence, verdict_flipped}` |
+
+`model: "b"` is only valid for `channel: "email"` — requesting it for SMS returns `422`.
 
 `model: "b"` returns `422` unless the server was started with `ALLOW_MODEL_B=true` and
 Model B's weights present -- see "Enabling Model B locally" above.

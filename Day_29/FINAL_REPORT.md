@@ -141,6 +141,38 @@ at least not under this training budget. The honest takeaway is narrower than "c
 embeddings help": on this task, with this much training data, they did not clearly help, and
 claiming otherwise would misrepresent a measured result.
 
+### B5. Multi-channel extension: SMS/smishing
+
+A second, independently-trained model extends coverage to SMS text, using the classic UCI
+SMS Spam Collection (5,574 messages via HF `datasets`, `sms_spam`) and the same TF-IDF +
+Logistic Regression architecture as the email channel's Model A --- deliberately not a second
+Transformer fine-tune (see below for why).
+
+**Preprocessing**: no missing/empty messages after stripping whitespace. Class imbalance is
+more severe than the email channel's ~61/39: 4,827 ham vs. 747 spam (~87/13), handled the
+same way (`class_weight="balanced"`, macro-averaged metrics). No length cap needed --
+SMS length limits keep messages short and uniform, unlike email's long-tail outliers.
+
+**Result**: best config (3,000 max features, unigrams only, C=1.0) reached **98.75% test
+accuracy, 0.9729 macro F1, 128.7KB artifact, sub-millisecond latency** -- small enough to
+deploy unconditionally alongside the email model (both load at startup), no memory trade-off
+the way Model B has. 7/558 test examples misclassified (1.3%).
+
+**Scope decision, disclosed rather than silently avoided**: Model B's fine-tuned DistilBERT
+comparison was not repeated for this channel. The Task 27 static-vs-contextual comparison is
+already made once, on the email channel (Part B3/B4 above); repeating a multi-hour
+Transformer fine-tune for a second channel would spend real compute time without producing a
+new comparison finding -- the same compute-budget discipline this project applied when the
+original Model B run needed restarting at a leaner configuration.
+
+**A real, distinct gap this channel surfaced**: SMS phishing links are routinely written
+without a `http://` scheme at all (`bit.ly/xyz123`, still tappable on a phone) --
+`backend/app/url_analysis.py`'s original URL regex only matched fully-qualified
+`https?://` URLs and silently missed these. Fixed by adding a second, bare-domain pattern
+(requiring a real-looking alphabetic TLD to avoid firing on version numbers or sentence-
+ending initials), verified against both a real scheme-less shortener link and a check that
+ordinary prose ("...3pm tomorrow... e.g. at the usual place.") does not false-positive.
+
 ## Part C — Backend & Frontend Development, Integration
 
 ### C1. API/backend
@@ -213,7 +245,7 @@ copy or interaction that could read as generating phishing content rather than d
 
 ### D1. Functional testing
 
-`tests/test_api.py`, 24 test cases, run via `pytest`:
+`tests/test_api.py`, 30 test cases, run via `pytest`:
 
 | Category | Tests | Result |
 |---|---|---|
@@ -225,6 +257,7 @@ copy or interaction that could read as generating phishing content rather than d
 | Label correctness on unambiguous cases | 4 | Pass |
 | Model selection (defaults to A, Model B cleanly rejected when disabled) | 2 | Pass |
 | Explainability, URL analysis, adversarial-check | 5 | Pass |
+| Multi-channel (email default, SMS smishing/routine cases, Model B rejected for SMS, bare-URL detection, channels endpoint) | 6 | Pass |
 
 **A real bug found before testing even started**: 533 rows in the source dataset carried
 the literal placeholder text `"empty"`, not caught by a null check — found by reading actual
@@ -236,17 +269,33 @@ misclassified examples, not by a data-quality scan. Documented above in B1.
 frontend and a Python runtime stage, non-root user, `HEALTHCHECK`, final image **649MB**.
 
 **Memory claim, verified directly, not estimated**: run with a hard `--memory=512m` cap,
-the container started cleanly and used **110MiB (21.48%)** of that budget:
+the container started cleanly and used **124MiB (24.2%)** of that budget with both channel
+models loaded (email + SMS; 110MiB with the email-only model measured earlier, before the
+SMS channel was added):
 
 ```
 CONTAINER       MEM USAGE / LIMIT   MEM %
-phishing-test   110MiB / 512MiB     21.48%
+phishing-test3  124MiB / 512MiB     24.2%
 ```
 
-All endpoints (including a live prediction) and the frontend were confirmed working through
-this exact capped container.
+All endpoints (including a live prediction on both channels) and the frontend were confirmed
+working through this exact capped container.
 
-**Live cloud deployment**: <!-- LIVE_DEPLOY_STATUS_PLACEHOLDER -->
+**Live cloud deployment succeeded**, on Render's free tier --
+[day29-phishing-inspector.onrender.com](https://day29-phishing-inspector.onrender.com) --
+deployed via Render's API with GitHub `main`-branch auto-deploy as the CI/CD pipeline.
+Verified live, not just built:
+
+```
+$ curl https://day29-phishing-inspector.onrender.com/api/v1/predict -X POST \
+  -d '{"text": "Verify your account at http://paypa1-secure.xyz/login immediately."}'
+{"label":"phishing", "highlights": [...8 spans...],
+ "url_findings": [{"host":"paypa1-secure.xyz",
+   "signals":["uncommon-tld (.xyz)","lookalike-domain ('paypa1' close to 'paypal')"]}]}
+```
+
+`/api/v1/channels`, `/api/v1/models`, and the frontend were confirmed live too, with both
+channel models' real numbers rendering correctly in the deployed UI.
 
 ### D3. Documentation
 

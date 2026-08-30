@@ -38,12 +38,14 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     MODEL_A_PATH=/app/model_v2/artifacts/model_a_tfidf_logreg.joblib \
+    MODEL_SMS_PATH=/app/model_v2/artifacts/model_sms_tfidf_logreg.joblib \
     RESULTS_DIR=/app/model_v2/results \
     FRONTEND_DIR=/app/frontend-app/dist
 
 COPY backend/app/ ./app/
 COPY --from=frontend-builder /fe/dist ./frontend-app/dist
 COPY model_v2/artifacts/model_a_tfidf_logreg.joblib ./model_v2/artifacts/model_a_tfidf_logreg.joblib
+COPY model_v2/artifacts/model_sms_tfidf_logreg.joblib ./model_v2/artifacts/model_sms_tfidf_logreg.joblib
 COPY model_v2/results/ ./model_v2/results/
 
 RUN chown -R app:app /app

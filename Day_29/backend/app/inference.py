@@ -1,11 +1,12 @@
 """
 Part C -- model loading (singleton, loaded once at import) and prediction
-logic. Model A loads unconditionally (the deployed model -- see Part A's
-justification). Model B loads only when explicitly enabled locally
-(config.ALLOW_MODEL_B); torch/transformers are imported lazily, inside
-get_model_b() itself, so the deployed service's process never even
-attempts to import them -- backend/requirements.txt has neither package,
-and this module still imports cleanly without them installed.
+logic, across two channels (email, sms) and two architectures (Model A:
+TF-IDF+LogReg, deployed for both channels; Model B: fine-tuned DistilBERT,
+email channel only, local-only comparison -- see config.ALLOW_MODEL_B).
+torch/transformers are imported lazily, inside get_model_b() itself, so the
+deployed service's process never even attempts to import them --
+backend/requirements.txt has neither package, and this module still
+imports cleanly without them installed.
 """
 import json
 import logging
@@ -16,14 +17,19 @@ from threading import Lock
 import joblib
 
 from app import url_analysis
-from app.config import ALLOW_MODEL_B, MODEL_A_PATH, MODEL_B_MAX_LEN, MODEL_B_PATH, RESULTS_DIR
+from app.config import (
+    ALLOW_MODEL_B, MODEL_A_PATH, MODEL_B_MAX_LEN, MODEL_B_PATH,
+    MODEL_SMS_PATH, RESULTS_DIR,
+)
 
 logger = logging.getLogger("app.inference")
 
 _model_a = None
+_model_sms = None
 _model_b = None
 _model_b_tokenizer = None
 _lock = Lock()
+_lock_sms = Lock()
 _lock_b = Lock()
 
 LABEL_NAMES = {0: "safe", 1: "phishing"}
@@ -36,14 +42,31 @@ def get_model_a():
     with _lock:
         if _model_a is not None:
             return _model_a
-        logger.info(f"Loading Model A from {MODEL_A_PATH}")
+        logger.info(f"Loading Model A (email) from {MODEL_A_PATH}")
         _model_a = joblib.load(MODEL_A_PATH)
-        logger.info("Model A loaded")
+        logger.info("Model A (email) loaded")
         return _model_a
 
 
 def is_model_a_loaded() -> bool:
     return _model_a is not None
+
+
+def get_model_sms():
+    global _model_sms
+    if _model_sms is not None:
+        return _model_sms
+    with _lock_sms:
+        if _model_sms is not None:
+            return _model_sms
+        logger.info(f"Loading SMS channel model from {MODEL_SMS_PATH}")
+        _model_sms = joblib.load(MODEL_SMS_PATH)
+        logger.info("SMS channel model loaded")
+        return _model_sms
+
+
+def is_model_sms_loaded() -> bool:
+    return _model_sms is not None
 
 
 def is_model_b_available() -> bool:
@@ -81,9 +104,15 @@ def get_model_b():
         return _model_b, _model_b_tokenizer
 
 
-def predict(text: str, model_choice: str = "a") -> dict:
-    result = _predict_b(text) if model_choice == "b" else _predict_a(text)
+def predict(text: str, model_choice: str = "a", channel: str = "email") -> dict:
+    if channel == "sms":
+        result = _predict_classical(get_model_sms(), text)
+    elif model_choice == "b":
+        result = _predict_b(text)
+    else:
+        result = _predict_classical(get_model_a(), text)
     result["url_findings"] = url_analysis.analyze_urls(text)
+    result["channel"] = channel
     return result
 
 
@@ -93,13 +122,14 @@ def _phrase_spans(text: str, phrase: str) -> list[tuple[int, int]]:
     return [(m.start(), m.end()) for m in re.finditer(pattern, text, re.IGNORECASE)]
 
 
-def explain_a(text: str, top_k: int = 8) -> list[dict]:
-    """Real model introspection, not a canned explanation: reads Model A's
-    own learned TF-IDF+LogisticRegression weights and reports which n-grams
-    actually present in this text contributed most to the decision, and in
-    which direction. classes_ is [0, 1] (safe, phishing), so a positive
-    coefficient pushes toward phishing, negative toward safe."""
-    model = get_model_a()
+def _explain(model, text: str, top_k: int = 8) -> list[dict]:
+    """Real model introspection, not a canned explanation: reads a classical
+    pipeline's own learned TF-IDF+LogisticRegression weights and reports
+    which n-grams actually present in this text contributed most to the
+    decision, and in which direction. classes_ is [0, 1] (safe, phishing),
+    so a positive coefficient pushes toward phishing, negative toward safe.
+    Works identically for the email and SMS channel models -- both are the
+    same architecture, just fit on different data."""
     tfidf = model.named_steps["tfidf"]
     clf = model.named_steps["clf"]
     vec = tfidf.transform([text]).tocoo()
@@ -132,13 +162,12 @@ def explain_a(text: str, top_k: int = 8) -> list[dict]:
     return highlights
 
 
-def _predict_a(text: str) -> dict:
-    model = get_model_a()
+def _predict_classical(model, text: str) -> dict:
     t0 = time.time()
     pred = model.predict([text])[0]
     proba = model.predict_proba([text])[0]
     latency_ms = (time.time() - t0) * 1000
-    highlights = explain_a(text)
+    highlights = _explain(model, text)
     return dict(label=LABEL_NAMES[int(pred)], confidence=float(proba[int(pred)]),
                 latency_ms=latency_ms, model="a", highlights=highlights)
 
@@ -155,22 +184,24 @@ def _predict_b(text: str) -> dict:
         proba = torch.softmax(logits, dim=1)[0]
     pred = int(torch.argmax(proba).item())
     latency_ms = (time.time() - t0) * 1000
-    # Explainability is only implemented for Model A's linear weights (see
-    # explain_a) -- a Transformer's contribution per token needs attention
-    # or integrated-gradients attribution, out of scope here.
+    # Explainability is only implemented for the classical models' linear
+    # weights (see _explain) -- a Transformer's contribution per token needs
+    # attention or integrated-gradients attribution, out of scope here.
     return dict(label=LABEL_NAMES[pred], confidence=float(proba[pred]),
                 latency_ms=latency_ms, model="b", highlights=[])
 
 
-def run_adversarial_check(text: str) -> dict:
+def run_adversarial_check(text: str, channel: str = "email") -> dict:
     """Applies a real evasion technique (leetspeak on common trigger words)
-    to the user's own text, then genuinely re-runs Model A on both versions
-    -- two real model calls, never a fabricated comparison."""
+    to the user's own text, then genuinely re-runs the same channel's
+    classical model on both versions -- two real model calls, never a
+    fabricated comparison."""
     from app import adversarial
 
-    original = _predict_a(text)
+    model = get_model_sms() if channel == "sms" else get_model_a()
+    original = _predict_classical(model, text)
     perturbation = adversarial.perturb(text)
-    perturbed = _predict_a(perturbation["perturbed_text"])
+    perturbed = _predict_classical(model, perturbation["perturbed_text"])
     return dict(
         original_label=original["label"], original_confidence=original["confidence"],
         perturbed_text=perturbation["perturbed_text"],
@@ -181,8 +212,11 @@ def run_adversarial_check(text: str) -> dict:
 
 
 def get_model_comparison() -> list[dict]:
-    """Reads both models' already-computed evaluation results from disk --
-    Model B's heavy artifact is never loaded into this process."""
+    """Reads both email-channel models' already-computed evaluation results
+    from disk -- Model B's heavy artifact is never loaded into this
+    process. This is specifically the Task 27 static-vs-contextual
+    comparison (email channel only); see get_channels() for cross-channel
+    coverage, a different, non-conflated story."""
     models = []
 
     baseline_path = RESULTS_DIR / "baseline_results.json"
@@ -218,3 +252,30 @@ def get_model_comparison() -> list[dict]:
         ))
 
     return models
+
+
+def get_channels() -> list[dict]:
+    """Real measured coverage per channel -- not the Model A/B architecture
+    comparison (see get_model_comparison), just which channels are live and
+    each one's actual deployed-model accuracy."""
+    channels = []
+
+    email_path = RESULTS_DIR / "baseline_results.json"
+    if email_path.exists():
+        e = json.loads(email_path.read_text())
+        channels.append(dict(
+            id="email", label="Email", available=True,
+            test_accuracy=e["test_accuracy"], test_macro_f1=e["test_macro_f1"],
+            artifact_size=f"{e['artifact_size_kb']:.0f} KB",
+        ))
+
+    sms_path = RESULTS_DIR / "sms_baseline_results.json"
+    if sms_path.exists():
+        s = json.loads(sms_path.read_text())
+        channels.append(dict(
+            id="sms", label="SMS", available=True,
+            test_accuracy=s["test_accuracy"], test_macro_f1=s["test_macro_f1"],
+            artifact_size=f"{s['artifact_size_kb']:.0f} KB",
+        ))
+
+    return channels
